@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1440</width>
+    <height>960</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QPushButton" name="getImagebtn">
+    <property name="geometry">
+     <rect>
+      <x>450</x>
+      <y>850</y>
+      <width>180</width>
+      <height>70</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Get Image</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Inferencebtn">
+    <property name="geometry">
+     <rect>
+      <x>810</x>
+      <y>850</y>
+      <width>180</width>
+      <height>70</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Inference</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="FrameLabel">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>60</y>
+      <width>1280</width>
+      <height>720</height>
+     </rect>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="indent">
+     <number>0</number>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1440</width>
+     <height>28</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
