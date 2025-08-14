@@ -1,4 +1,0 @@
-# Hashes of file build rules.
-9e84fe333a930a42a40d8fdd5795837c CCTVapp_autogen/timestamp
-97d1efcad53c330c34e36f4f292b827e CMakeFiles/CCTVapp_autogen
-97d1efcad53c330c34e36f4f292b827e CMakeFiles/CCTVapp_autogen_timestamp_deps

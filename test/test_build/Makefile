@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/user/dotNetProject/CCTVapp
+CMAKE_SOURCE_DIR = /home/user/dotNetProject/CCTVapp/test
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/user/dotNetProject/CCTVapp/build
+CMAKE_BINARY_DIR = /home/user/dotNetProject/CCTVapp/test/test_build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/dotNetProject/CCTVapp/build/CMakeFiles /home/user/dotNetProject/CCTVapp/build//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/dotNetProject/CCTVapp/test/test_build/CMakeFiles /home/user/dotNetProject/CCTVapp/test/test_build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/dotNetProject/CCTVapp/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/user/dotNetProject/CCTVapp/test/test_build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -117,89 +117,41 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named app
+# Target rules for targets named test1
 
 # Build rule for target.
-app: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 app
-.PHONY : app
+test1: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test1
+.PHONY : test1
 
 # fast build rule for target.
-app/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/build
-.PHONY : app/fast
+test1/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test1.dir/build.make CMakeFiles/test1.dir/build
+.PHONY : test1/fast
 
-src/cctv.o: src/cctv.cpp.o
-.PHONY : src/cctv.o
-
-# target to build an object file
-src/cctv.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/cctv.cpp.o
-.PHONY : src/cctv.cpp.o
-
-src/cctv.i: src/cctv.cpp.i
-.PHONY : src/cctv.i
-
-# target to preprocess a source file
-src/cctv.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/cctv.cpp.i
-.PHONY : src/cctv.cpp.i
-
-src/cctv.s: src/cctv.cpp.s
-.PHONY : src/cctv.s
-
-# target to generate assembly for a file
-src/cctv.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/cctv.cpp.s
-.PHONY : src/cctv.cpp.s
-
-src/getFrame.o: src/getFrame.cpp.o
-.PHONY : src/getFrame.o
+test.o: test.cpp.o
+.PHONY : test.o
 
 # target to build an object file
-src/getFrame.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/getFrame.cpp.o
-.PHONY : src/getFrame.cpp.o
+test.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test1.dir/build.make CMakeFiles/test1.dir/test.cpp.o
+.PHONY : test.cpp.o
 
-src/getFrame.i: src/getFrame.cpp.i
-.PHONY : src/getFrame.i
-
-# target to preprocess a source file
-src/getFrame.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/getFrame.cpp.i
-.PHONY : src/getFrame.cpp.i
-
-src/getFrame.s: src/getFrame.cpp.s
-.PHONY : src/getFrame.s
-
-# target to generate assembly for a file
-src/getFrame.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/getFrame.cpp.s
-.PHONY : src/getFrame.cpp.s
-
-src/main.o: src/main.cpp.o
-.PHONY : src/main.o
-
-# target to build an object file
-src/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/main.cpp.o
-.PHONY : src/main.cpp.o
-
-src/main.i: src/main.cpp.i
-.PHONY : src/main.i
+test.i: test.cpp.i
+.PHONY : test.i
 
 # target to preprocess a source file
-src/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/main.cpp.i
-.PHONY : src/main.cpp.i
+test.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test1.dir/build.make CMakeFiles/test1.dir/test.cpp.i
+.PHONY : test.cpp.i
 
-src/main.s: src/main.cpp.s
-.PHONY : src/main.s
+test.s: test.cpp.s
+.PHONY : test.s
 
 # target to generate assembly for a file
-src/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/app.dir/build.make CMakeFiles/app.dir/src/main.cpp.s
-.PHONY : src/main.cpp.s
+test.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test1.dir/build.make CMakeFiles/test1.dir/test.cpp.s
+.PHONY : test.cpp.s
 
 # Help Target
 help:
@@ -209,16 +161,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... app"
-	@echo "... src/cctv.o"
-	@echo "... src/cctv.i"
-	@echo "... src/cctv.s"
-	@echo "... src/getFrame.o"
-	@echo "... src/getFrame.i"
-	@echo "... src/getFrame.s"
-	@echo "... src/main.o"
-	@echo "... src/main.i"
-	@echo "... src/main.s"
+	@echo "... test1"
+	@echo "... test.o"
+	@echo "... test.i"
+	@echo "... test.s"
 .PHONY : help
 
 

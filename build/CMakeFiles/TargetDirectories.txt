@@ -1,5 +1,3 @@
-/home/user/dotNetProject/CCTVapp/build/CMakeFiles/CCTVapp.dir
+/home/user/dotNetProject/CCTVapp/build/CMakeFiles/app.dir
 /home/user/dotNetProject/CCTVapp/build/CMakeFiles/edit_cache.dir
 /home/user/dotNetProject/CCTVapp/build/CMakeFiles/rebuild_cache.dir
-/home/user/dotNetProject/CCTVapp/build/CMakeFiles/CCTVapp_autogen_timestamp_deps.dir
-/home/user/dotNetProject/CCTVapp/build/CMakeFiles/CCTVapp_autogen.dir
