@@ -1,10 +1,6 @@
 #include "cctv.h"
 
-CCTV::CCTV(std::string rtspURL) : rtspURL(rtspURL) {}
-
-ThreadSafeStack<cv::Mat>* CCTV::get_image_stack(){
-    return &this->image_stack;
-}
+CCTV::CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat>* stack) : rtspURL(rtspURL), image_stack(stack) {}
 
 int CCTV::start_image_capture() {
     cv::VideoCapture vicap = connectRTSP(this->rtspURL);
@@ -17,7 +13,7 @@ int CCTV::start_image_capture() {
     while(true){
         cv::Mat frame;
         if (vicap.read(frame)){
-            this->image_stack.push(frame);
+            this->image_stack->push(frame);
             // std::cout << "image push done" << std::endl;    
         } else {
             std::cerr<< "Cannot read frame, try to reconnect..." << std::endl;

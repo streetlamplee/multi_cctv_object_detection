@@ -52,6 +52,23 @@ public:
     }
 
     /**
+     * @brief 스택의 맨 위에서 아이템을 꺼내려고 시도합니다. (비동기)
+     * 
+     * @param[out] item 스택에서 꺼낸 아이템이 저장될 변수
+     * @return true 아이템을 성공적으로 꺼냈으면
+     * @return false 스택이 비어있으면
+     */
+    bool try_pop(T& item) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (data_container_.empty()) {
+            return false;
+        }
+        item = std::move(data_container_.front());
+        data_container_.pop_front();
+        return true;
+    }
+
+    /**
      * @brief 스택이 비어있는지 확인합니다.
      * 
      * @return true 스택이 비어있으면

@@ -7,11 +7,11 @@
 class CCTV {
     private:
         std::string rtspURL;
-        ThreadSafeStack<cv::Mat> image_stack;
+        ThreadSafeStack<cv::Mat>* image_stack;
 
     public:
-        CCTV(std::string rtspURL);
-        ThreadSafeStack<cv::Mat>* get_image_stack();
+        CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat>* stack);
+        
         int start_image_capture();
 
 
