@@ -15,6 +15,7 @@ template<typename T>
 class ThreadSafeQueue {
 public:
     ThreadSafeQueue() = default;
+    ThreadsafeQueue(int maxSize) : max_size(maxSize) {}
     ~ThreadSafeQueue() = default;
 
     // 복사 및 이동 생성자/대입 연산자 삭제
@@ -28,12 +29,22 @@ public:
 
     /**
      * @brief 큐의 맨 뒤에 아이템을 추가합니다.
-     * 
+     * 만약 큐가 max_size에 도달했다면, 가장 오래된 아이템을 제거하고 새 아이템을 추가합니다.
      * @param item 큐에 추가할 아이템
      */
     void push(T item) {
         std::lock_guard<std::mutex> lock(mutex_);
+
+        // max_size가 설정되어 있고, 큐가 가득 찼는지 확인합니다.
+        if (max_size > 0 && queue_.size() >= max_size) {
+            // 가장 오래된 아이템(큐의 맨 앞)을 제거합니다.
+            queue_.pop();
+        }
+
+        // 새로운 아이템을 큐의 맨 뒤에 추가합니다.
         queue_.push(std::move(item));
+        
+        // 아이템 추가를 기다리는 스레드(wait_and_pop)가 있다면 깨웁니다.
         cond_.notify_one();
     }
 
@@ -76,6 +87,7 @@ private:
     mutable std::mutex mutex_; 
     std::queue<T> queue_;
     std::condition_variable cond_;
+    int max_size = -1;
 };
 
 #endif // THREAD_SAFE_QUEUE_H

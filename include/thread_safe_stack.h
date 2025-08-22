@@ -15,6 +15,7 @@ template<typename T>
 class ThreadSafeStack {
 public:
     ThreadSafeStack() = default;
+    ThreadSafeStack(int maxSize) : max_size(maxSize) {}
     ~ThreadSafeStack() = default;
 
     // 복사 및 이동 생성자/대입 연산자 삭제
@@ -28,12 +29,22 @@ public:
 
     /**
      * @brief 스택의 맨 위에 아이템을 추가합니다. (LIFO)
-     * 
-     * @param item 스택에 추가할 아이템
+     * 만약 스택이 max_size에 도달했다면, 가장 오래된 아이템을 제거하고 새 아이템을 추가합니다.
+     * * @param item 스택에 추가할 아이템
      */
     void push(T item) {
         std::lock_guard<std::mutex> lock(mutex_);
+
+        // max_size가 설정(0보다 큼)되어 있고, 스택이 가득 찼는지 확인합니다.
+        if (max_size > 0 && data_container_.size() >= max_size) {
+            // 가장 오래된 아이템(리스트의 맨 뒤)을 제거합니다.
+            data_container_.pop_back();
+        }
+
+        // 새로운 아이템을 스택의 맨 위(리스트의 맨 앞)에 추가합니다.
         data_container_.push_front(std::move(item));
+        
+        // 아이템 추가를 기다리는 스레드(wait_and_pop)가 있다면 깨웁니다.
         cond_.notify_one();
     }
 
@@ -93,6 +104,7 @@ private:
     mutable std::mutex mutex_; 
     std::list<T> data_container_;
     std::condition_variable cond_;
+    int max_size = -1;
 };
 
 #endif // THREAD_SAFE_STACK_H

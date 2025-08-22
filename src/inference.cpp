@@ -54,33 +54,35 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
 
     for (int i = 0; i < transposed_output.rows; i++) {
         cv::Mat row = transposed_output.row(i);
-        
         float* data = (float*)row.data;
-        float confidence = data[4];
 
-        if (confidence >= confidence_threshold) {
-            float* classes_scores = data + 4;
-            cv::Mat scores(1, class_names.size(), CV_32FC1, classes_scores);
-            cv::Point class_id;
-            double max_class_score;
-            cv::minMaxLoc(scores, 0, &max_class_score, 0, &class_id);
+        // 클래스 점수는 5번 인덱스부터 시작합니다.
+        cv::Mat scores(1, class_names.size(), CV_32FC1, data + 4);
 
-            if (max_class_score > 0.25) {
-                confidences.push_back(confidence);
-                class_ids.push_back(class_id.x);
+        // 가장 높은 점수를 가진 클래스의 ID와 점수를 찾습니다.
+        cv::Point class_id_point;
+        double max_class_score;
+        cv::minMaxLoc(scores, 0, &max_class_score, 0, &class_id_point);
 
-                float x = data[0];
-                float y = data[1];
-                float w = data[2];
-                float h = data[3];
+        // 최종 신뢰도 = 객체 신뢰도 * 클래스 점수
+        float confidence = (float)max_class_score;
 
-                int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
-                int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
-                int width = static_cast<int>(w / r);
-                int height = static_cast<int>(h / r);
+        // 최종 신뢰도가 임계값을 넘는지 확인합니다.
+        if (confidence > confidence_threshold) { // confidence_threshold는 0.5f로 설정되어 있음
+            confidences.push_back(confidence);
+            class_ids.push_back(class_id_point.x);
 
-                boxes.push_back(cv::Rect(left, top, width, height));
-            }
+            float x = data[0];
+            float y = data[1];
+            float w = data[2];
+            float h = data[3];
+
+            int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
+            int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
+            int width = static_cast<int>(w / r);
+            int height = static_cast<int>(h / r);
+
+            boxes.push_back(cv::Rect(left, top, width, height));
         }
     }
 

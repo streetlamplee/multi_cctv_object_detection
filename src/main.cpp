@@ -14,8 +14,8 @@
 struct CameraChannel {
     std::string rtsp_url;
     CCTV* cctv_instance = nullptr;
-    ThreadSafeStack<cv::Mat> raw_frame_stack;
-    ThreadSafeStack<cv::Mat> inference_frame_stack;
+    ThreadSafeStack<cv::Mat> raw_frame_stack{20};
+    ThreadSafeStack<cv::Mat> inference_frame_stack{10};
     ThreadSafeStack<std::vector<BBoxInfo>> results_stack;
     cv::Rect display_roi;
     std::vector<int> detected_class;
@@ -38,14 +38,20 @@ struct CameraChannel {
 // --- Global Variables ---
 cv::Mat g_canvas(900, 1600, CV_8UC3, cv::Scalar(0, 0, 0));
 std::mutex g_canvas_mutex;
+std::mutex g_alarm_mutex;
 bool g_running = true;
 std::vector<Alarm> g_alarms;
 
 
 // --- Configuration ---
-// List of class IDs to display. Others will be filtered out.
-// YOLO COCO Class IDs: 0:person, 1:bicycle, 2:car, 3:motorcycle, 5:bus, 7:truck
-std::vector<int> g_allowed_class_ids = {0};
+std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
+
+//test Fuction : 지워도 상관 없는 테스트용 코드
+void test_allow_class_id() {
+    for (int i; i = 0; i++) {
+        g_allowed_class_ids.push_back(i);
+    }
+}
 
 
 // --- Thread Functions ---
@@ -89,6 +95,8 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
         // 2. Lock the canvas and draw everything
         {
             std::lock_guard<std::mutex> lock(g_canvas_mutex);
+            std::lock_guard<std::mutex> lock2(g_alarm_mutex);
+
             for (size_t i = 0; i < channels.size(); ++i) {
                 // Draw the latest frame to its ROI
                 if (!latest_frames[i].empty()) {
@@ -96,18 +104,20 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                     cv::resize(latest_frames[i], resized_frame, channels[i]->display_roi.size());
                     resized_frame.copyTo(g_canvas(channels[i]->display_roi));
                 }
-
+                
+                channels[i]->detected_class.clear();
                 // Draw the latest bounding boxes to its ROI, applying the class filter
                 if (!latest_results[i].empty()) {
                     for (const auto& det : latest_results[i]) {
-                        channels[i]->detected_class.push_back(det.classID);
                         cv::Scalar color;
+
+                        channels[i]->detected_class.push_back(det.classID);
                         if (channels[i]->alarm != 0) {
                             color = cv::Scalar(0,0,255);
                         } else {
                             color = cv::Scalar(0,255,0);
                         }
-                        
+                    
                         // FILTERING LOGIC: Check if the classID is in the allowed list
                         if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
                             cv::Rect box = det.box;
@@ -127,6 +137,7 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                         }
                     }
                 }
+                
             }
         }
 
@@ -153,20 +164,34 @@ void set_alarm() {
 }
 
 void alarm_worker(CameraChannel* cc) {
-
-
+    std::vector<Alarm> local_alarms = g_alarms;
+    int counter = 0;
     while(g_running) {
-        for (Alarm alarm : g_alarms) {
+        
+        for (Alarm alarm : local_alarms) {
             std::vector<int> condition = alarm.get_condition();
-            std::vector<int> detectedClass = cc->detected_class;
-            
-            if (define_alarm(condition, detectedClass)) {
-                cc->alarm = alarm.get_risk_level();
-            }
-        }
-    }
 
-    
+            {
+                std::lock_guard<std::mutex> lock(g_alarm_mutex);
+                std::vector<int> detectedClass = cc->detected_class;
+                if (define_alarm(condition, detectedClass) && cc->alarm <= alarm.get_risk_level()) {
+                    cc->alarm = alarm.get_risk_level();
+                    ++counter;
+                    std::cout << "Warning condition approved, " << counter << "times" << std::endl;
+
+                } else {
+                    cc->alarm = 0;
+                }
+
+                cc->detected_class.clear();
+            }
+            
+            
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -192,6 +217,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     set_alarm();
+    test_allow_class_id();
 
     // --- Start Threads ---
     std::thread display_thread(display_manager, std::ref(channels));

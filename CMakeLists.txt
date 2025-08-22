@@ -3,6 +3,8 @@ project(CCTV_YOLO)
 
 find_package(OpenCV REQUIRED)
 message(STATUS "Found OpenCV version: ${OpenCV_VERSION}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
 add_executable(app 
     src/main.cpp
     src/cctv.cpp
