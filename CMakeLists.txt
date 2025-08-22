@@ -8,6 +8,8 @@ add_executable(app
     src/cctv.cpp
     src/getFrame.cpp
     src/inference.cpp
+    src/alarm.cpp
+    src/read_config.cpp
 )
 
 target_include_directories(app PRIVATE

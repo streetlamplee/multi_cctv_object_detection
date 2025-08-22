@@ -20,6 +20,7 @@ int split(const std::string& line, std::vector<std::string>& tokens, char sepera
 int strip(std::string& word) {
     word.erase(0, word.find_first_not_of(" \t\n\r\f\v"));
     word.erase(word.find_last_not_of(" \t\n\r\f\v") + 1);
+    return 1;
 }
 
 int config_processor(std::string line, std::vector<std::string>& output) {
@@ -29,9 +30,11 @@ int config_processor(std::string line, std::vector<std::string>& output) {
         strip(word);
         output.push_back(word);
     }
+    return 1;
 }
 
 int read_config(std::string config_path, std::unordered_map<std::string, std::vector<int>>& config) {
+    std::cout << "Current Working Directory: " << std::filesystem::current_path() << std::endl;
     std::ifstream configFile(config_path);
 
     if (!configFile.is_open()) {
@@ -54,6 +57,10 @@ int read_config(std::string config_path, std::unordered_map<std::string, std::ve
             alarm_vector.push_back(std::stoi(v));
         }
         config[processor_output[0]] = alarm_vector;
+
+        processor_output.clear();
+        alarm_vector.clear();
+        alarm_vector_s.clear();
     }
     return 1;
 }

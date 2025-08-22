@@ -7,6 +7,8 @@
 #include <mutex>
 #include <chrono>
 #include <algorithm> // Required for std::find
+#include "read_config.h"
+#include "alarm.h"
 
 // A structure to hold all resources for a single camera channel
 struct CameraChannel {
@@ -16,8 +18,11 @@ struct CameraChannel {
     ThreadSafeStack<cv::Mat> inference_frame_stack;
     ThreadSafeStack<std::vector<BBoxInfo>> results_stack;
     cv::Rect display_roi;
+    std::vector<int> detected_class;
+    int alarm = 0;
     std::thread producer_thread;
     std::thread inference_thread;
+    std::thread alarm_thread;
 
     // Constructor to initialize the ROI
     CameraChannel(cv::Rect roi) : display_roi(roi) {}
@@ -34,6 +39,8 @@ struct CameraChannel {
 cv::Mat g_canvas(900, 1600, CV_8UC3, cv::Scalar(0, 0, 0));
 std::mutex g_canvas_mutex;
 bool g_running = true;
+std::vector<Alarm> g_alarms;
+
 
 // --- Configuration ---
 // List of class IDs to display. Others will be filtered out.
@@ -93,6 +100,14 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                 // Draw the latest bounding boxes to its ROI, applying the class filter
                 if (!latest_results[i].empty()) {
                     for (const auto& det : latest_results[i]) {
+                        channels[i]->detected_class.push_back(det.classID);
+                        cv::Scalar color;
+                        if (channels[i]->alarm != 0) {
+                            color = cv::Scalar(0,0,255);
+                        } else {
+                            color = cv::Scalar(0,255,0);
+                        }
+                        
                         // FILTERING LOGIC: Check if the classID is in the allowed list
                         if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
                             cv::Rect box = det.box;
@@ -106,9 +121,9 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                             scaled_box.width = static_cast<int>(box.width * scale_x);
                             scaled_box.height = static_cast<int>(box.height * scale_y);
 
-                            cv::rectangle(g_canvas, scaled_box, cv::Scalar(0, 255, 0), 2);
+                            cv::rectangle(g_canvas, scaled_box, color, 2);
                             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
-                            cv::putText(g_canvas, label, cv::Point(scaled_box.x, scaled_box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 255, 0), 2);
+                            cv::putText(g_canvas, label, cv::Point(scaled_box.x, scaled_box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
                         }
                     }
                 }
@@ -121,6 +136,37 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
             g_running = false;
         }
     }
+}
+
+void set_alarm() {
+    std::string config_path = "cctv.config";
+    std::unordered_map<std::string, std::vector<int>> config;
+    read_config(config_path, config);
+
+    for (auto& pair : config) {
+        Alarm a = Alarm();
+        a.set_description(pair.first);
+        a.set_condition(pair.second);
+        a.set_risk_level(1);
+        g_alarms.push_back(a);
+    }
+}
+
+void alarm_worker(CameraChannel* cc) {
+
+
+    while(g_running) {
+        for (Alarm alarm : g_alarms) {
+            std::vector<int> condition = alarm.get_condition();
+            std::vector<int> detectedClass = cc->detected_class;
+            
+            if (define_alarm(condition, detectedClass)) {
+                cc->alarm = alarm.get_risk_level();
+            }
+        }
+    }
+
+    
 }
 
 int main(int argc, char* argv[]) {
@@ -145,6 +191,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: Cannot load ONNX model" << std::endl;
         return -1;
     }
+    set_alarm();
 
     // --- Start Threads ---
     std::thread display_thread(display_manager, std::ref(channels));
@@ -152,6 +199,7 @@ int main(int argc, char* argv[]) {
     for (auto& channel : channels) {
         channel->producer_thread = std::thread(producer, channel.get());
         channel->inference_thread = std::thread(inference_worker, channel.get(), std::ref(net));
+        channel->alarm_thread = std::thread(alarm_worker, channel.get());
     }
 
     // --- Wait for Threads to Finish ---
@@ -159,6 +207,8 @@ int main(int argc, char* argv[]) {
     for (auto& channel : channels) {
         channel->producer_thread.join();
         channel->inference_thread.join();
+        channel->alarm_thread.join();
+
     }
 
     return 0;
