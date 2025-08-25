@@ -1,0 +1,11 @@
+{"alarm1" :
+    {
+        "description" : "",
+        "risk_level" : 1,
+        "condition" :
+        {
+            "0":{ "0" : false, "66" : true },
+            "1":{ "0" : true, "66" : false }
+        }
+    }
+}

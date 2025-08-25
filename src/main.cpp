@@ -26,7 +26,6 @@ struct CameraChannel {
 
     // Constructor to initialize the ROI
     CameraChannel(cv::Rect roi) : display_roi(roi) {}
-
     // Cleanup function
     ~CameraChannel() {
         if (cctv_instance) {
@@ -45,13 +44,6 @@ std::vector<Alarm> g_alarms;
 
 // --- Configuration ---
 std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
-
-//test Fuction : 지워도 상관 없는 테스트용 코드
-void test_allow_class_id() {
-    for (int i; i = 0; i++) {
-        g_allowed_class_ids.push_back(i);
-    }
-}
 
 
 // --- Thread Functions ---
@@ -73,6 +65,8 @@ void inference_worker(CameraChannel* channel, const cv::dnn::Net& net) {
 
         auto results = inference(net, frame_rgb);
         channel->results_stack.push(results);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -99,6 +93,17 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 
             for (size_t i = 0; i < channels.size(); ++i) {
                 // Draw the latest frame to its ROI
+
+
+                // alarm 발생 시, 빨간 색, 아닐 시 초록 색
+                cv::Scalar color;
+
+                if (channels[i]->alarm != 0) {
+                    color = cv::Scalar(0,0,255);
+                } else {
+                    color = cv::Scalar(0,255,0);
+                }
+
                 if (!latest_frames[i].empty()) {
                     cv::Mat resized_frame;
                     cv::resize(latest_frames[i], resized_frame, channels[i]->display_roi.size());
@@ -109,14 +114,8 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                 // Draw the latest bounding boxes to its ROI, applying the class filter
                 if (!latest_results[i].empty()) {
                     for (const auto& det : latest_results[i]) {
-                        cv::Scalar color;
 
                         channels[i]->detected_class.push_back(det.classID);
-                        if (channels[i]->alarm != 0) {
-                            color = cv::Scalar(0,0,255);
-                        } else {
-                            color = cv::Scalar(0,255,0);
-                        }
                     
                         // FILTERING LOGIC: Check if the classID is in the allowed list
                         if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
@@ -132,6 +131,10 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                             scaled_box.height = static_cast<int>(box.height * scale_y);
 
                             cv::rectangle(g_canvas, scaled_box, color, 2);
+                            // alarm 테두리 빨간 색 처리 코드
+                            if (channels[i]->alarm >= 2) {
+                                cv::rectangle(g_canvas, channels[i]->display_roi, color, 3);
+                            }
                             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
                             cv::putText(g_canvas, label, cv::Point(scaled_box.x, scaled_box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
                         }
@@ -145,20 +148,27 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
         cv::imshow("NVR Stream - 4 Channels", g_canvas);
         if (cv::waitKey(1) == 'q') {
             g_running = false;
+            cv::destroyAllWindows();
         }
     }
 }
 
 void set_alarm() {
-    std::string config_path = "cctv.config";
-    std::unordered_map<std::string, std::vector<int>> config;
-    read_config(config_path, config);
+    // std::string config_path = "cctv.config";
+    // std::unordered_map<std::string, std::vector<int>> config;
+    // read_config(config_path, config);
 
-    for (auto& pair : config) {
+    std::string config_path = "alarm_config.json";
+    json config_json;
+    read_config_json(config_path, config_json);
+
+    for (auto& config : config_json.items()) {
+        std::string alarm_name = config.key();
+        json& alarm_detail = config.value();
         Alarm a = Alarm();
-        a.set_description(pair.first);
-        a.set_condition(pair.second);
-        a.set_risk_level(1);
+        a.set_description(alarm_detail["description"].get<std::string>());
+        a.set_condition(alarm_detail["condition"]);
+        a.set_risk_level(alarm_detail["risk_level"].get<int>());
         g_alarms.push_back(a);
     }
 }
@@ -169,12 +179,12 @@ void alarm_worker(CameraChannel* cc) {
     while(g_running) {
         
         for (Alarm alarm : local_alarms) {
-            std::vector<int> condition = alarm.get_condition();
+            json condition = alarm.get_condition();
 
             {
                 std::lock_guard<std::mutex> lock(g_alarm_mutex);
                 std::vector<int> detectedClass = cc->detected_class;
-                if (define_alarm(condition, detectedClass) && cc->alarm <= alarm.get_risk_level()) {
+                if (define_alarm_json(condition, detectedClass) && cc->alarm <= alarm.get_risk_level()) {
                     cc->alarm = alarm.get_risk_level();
                     ++counter;
                     std::cout << "Warning condition approved, " << counter << "times" << std::endl;
@@ -205,9 +215,9 @@ int main(int argc, char* argv[]) {
 
     // IMPORTANT: Set the correct RTSP URL for each camera
     channels[0]->rtsp_url = "rtsp://admin:q1w2e3r4@192.168.1.100:554/Streaming/Channels/201/";
-    channels[1]->rtsp_url = ""; // Change this URL
-    channels[2]->rtsp_url = ""; // Change this URL
-    channels[3]->rtsp_url = "";// Change this URL
+    channels[1]->rtsp_url = ""; 
+    channels[2]->rtsp_url = ""; 
+    channels[3]->rtsp_url = "";
 
     // --- Initialization ---
     std::string onnx_path = "../resource/yolov8n.onnx";
@@ -217,7 +227,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     set_alarm();
-    test_allow_class_id();
 
     // --- Start Threads ---
     std::thread display_thread(display_manager, std::ref(channels));

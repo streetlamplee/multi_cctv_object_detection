@@ -17,6 +17,7 @@ add_executable(app
 target_include_directories(app PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/lib
+    ${CMAKE_SOURCE_DIR}/lib/json
     ${OpenCV_INCLUDE_DIRS}
 )
 
