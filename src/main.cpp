@@ -96,12 +96,19 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 
 
                 // alarm 발생 시, 빨간 색, 아닐 시 초록 색
-                cv::Scalar color;
+                cv::Scalar color_anchor;
+                cv::Scalar color_boundary;
+                if (channels[i]->alarm == 0){
+                    color_anchor = cv::Scalar(0,255,0);
+                    color_boundary = cv::Scalar(0,0,0);
 
-                if (channels[i]->alarm != 0) {
-                    color = cv::Scalar(0,0,255);
-                } else {
-                    color = cv::Scalar(0,255,0);
+                } else if (channels[i]->alarm == 1) {
+                    color_anchor = cv::Scalar(0,0,255);
+                    color_boundary = cv::Scalar(0,0,0);
+
+                } else if (channels[i]->alarm == 2){
+                    color_anchor = cv::Scalar(0,0,255);
+                    color_boundary = cv::Scalar(0,0,255);
                 }
 
                 if (!latest_frames[i].empty()) {
@@ -130,13 +137,11 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                             scaled_box.width = static_cast<int>(box.width * scale_x);
                             scaled_box.height = static_cast<int>(box.height * scale_y);
 
-                            cv::rectangle(g_canvas, scaled_box, color, 2);
+                            cv::rectangle(g_canvas, scaled_box, color_anchor, 2);
                             // alarm 테두리 빨간 색 처리 코드
-                            if (channels[i]->alarm >= 2) {
-                                cv::rectangle(g_canvas, channels[i]->display_roi, color, 3);
-                            }
+                            cv::rectangle(g_canvas, channels[i]->display_roi, color_boundary, 3);
                             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
-                            cv::putText(g_canvas, label, cv::Point(scaled_box.x, scaled_box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
+                            cv::putText(g_canvas, label, cv::Point(scaled_box.x, scaled_box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
                         }
                     }
                 }
@@ -153,51 +158,32 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
     }
 }
 
-void set_alarm() {
-    // std::string config_path = "cctv.config";
-    // std::unordered_map<std::string, std::vector<int>> config;
-    // read_config(config_path, config);
-
-    std::string config_path = "alarm_config.json";
-    json config_json;
-    read_config_json(config_path, config_json);
-
-    for (auto& config : config_json.items()) {
-        std::string alarm_name = config.key();
-        json& alarm_detail = config.value();
-        Alarm a = Alarm();
-        a.set_description(alarm_detail["description"].get<std::string>());
-        a.set_condition(alarm_detail["condition"]);
-        a.set_risk_level(alarm_detail["risk_level"].get<int>());
-        g_alarms.push_back(a);
-    }
-}
-
 void alarm_worker(CameraChannel* cc) {
     std::vector<Alarm> local_alarms = g_alarms;
     int counter = 0;
+    std::string alarm_condition = "";
     while(g_running) {
-        
+        int risk_level = 0;
         for (Alarm alarm : local_alarms) {
-            json condition = alarm.get_condition();
-
+            std::string condition = alarm.get_condition();
             {
                 std::lock_guard<std::mutex> lock(g_alarm_mutex);
                 std::vector<int> detectedClass = cc->detected_class;
-                if (define_alarm_json(condition, detectedClass) && cc->alarm <= alarm.get_risk_level()) {
-                    cc->alarm = alarm.get_risk_level();
-                    ++counter;
-                    std::cout << "Warning condition approved, " << counter << "times" << std::endl;
-
-                } else {
-                    cc->alarm = 0;
+                if (alarm.get_risk_level() < risk_level) { 
+                    continue;
                 }
-
-                cc->detected_class.clear();
+                else if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
+                    risk_level = alarm.get_risk_level();
+                }
+                cc->alarm = risk_level;
             }
-            
-            
         }
+
+        ++counter;
+        std::cout << "[Alarm Thread] Condition : " << alarm_condition << ", risk level : " << cc->alarm << std::endl;
+        std::cout << "[Alarm Thread] Warning condition approved, " << counter << "times" << std::endl;
+
+        cc->detected_class.clear();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
@@ -221,12 +207,13 @@ int main(int argc, char* argv[]) {
 
     // --- Initialization ---
     std::string onnx_path = "../resource/yolov8n.onnx";
+    std::string config_path = "alarm.conf";
     cv::dnn::Net net = cv::dnn::readNet(onnx_path);
     if (net.empty()) {
         std::cerr << "Error: Cannot load ONNX model" << std::endl;
         return -1;
     }
-    set_alarm();
+    read_conf(config_path, g_alarms);
 
     // --- Start Threads ---
     std::thread display_thread(display_manager, std::ref(channels));

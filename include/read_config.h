@@ -9,6 +9,8 @@
 #include <filesystem>
 #include "json.hpp"
 using json = nlohmann::json;
+#include "alarm.h"
+#include <stack>
 
 
 bool start_with(const std::string str, const std::string prefix);
@@ -17,8 +19,10 @@ int split(const std::string& line, std::vector<std::string>& tokens, char sepera
 
 int strip(std::string& word);
 
-int config_processor(std::string line, std::vector<std::string>& output);
-
-int read_config(std::string config_path, std::unordered_map<std::string, std::vector<int>>& config);
-
 int read_config_json(std::string json_path, json& config);
+
+int make_space(std::string& str);
+
+int postfix(std::string& str);
+
+int read_conf(std::string config_path, std::vector<Alarm>& alarms);
