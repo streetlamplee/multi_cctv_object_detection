@@ -84,5 +84,6 @@ CMakeUserPresets.json
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,c++,opencv,cmake
 build/*
+build/
 test/
 .vscode/
