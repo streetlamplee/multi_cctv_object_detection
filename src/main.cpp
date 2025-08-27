@@ -119,6 +119,8 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                 
                 channels[i]->detected_class.clear();
                 // Draw the latest bounding boxes to its ROI, applying the class filter
+                // alarm 테두리 빨간 색 처리 코드   
+                cv::rectangle(g_canvas, channels[i]->display_roi, color_boundary, 3);
                 if (!latest_results[i].empty()) {
                     for (const auto& det : latest_results[i]) {
 
@@ -138,8 +140,6 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                             scaled_box.height = static_cast<int>(box.height * scale_y);
 
                             cv::rectangle(g_canvas, scaled_box, color_anchor, 2);
-                            // alarm 테두리 빨간 색 처리 코드
-                            cv::rectangle(g_canvas, channels[i]->display_roi, color_boundary, 3);
                             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
                             cv::putText(g_canvas, label, cv::Point(scaled_box.x, scaled_box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
                         }
@@ -160,10 +160,12 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 
 void alarm_worker(CameraChannel* cc) {
     std::vector<Alarm> local_alarms = g_alarms;
-    int counter = 0;
     std::string alarm_condition = "";
+    int counter = 0;
+    
     while(g_running) {
         int risk_level = 0;
+        bool isAlarm = false;
         for (Alarm alarm : local_alarms) {
             std::string condition = alarm.get_condition();
             {
@@ -172,16 +174,21 @@ void alarm_worker(CameraChannel* cc) {
                 if (alarm.get_risk_level() < risk_level) { 
                     continue;
                 }
-                else if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
+                if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
+                    isAlarm = true;
                     risk_level = alarm.get_risk_level();
+                    alarm_condition = condition;
+
                 }
                 cc->alarm = risk_level;
             }
         }
-
-        ++counter;
-        std::cout << "[Alarm Thread] Condition : " << alarm_condition << ", risk level : " << cc->alarm << std::endl;
-        std::cout << "[Alarm Thread] Warning condition approved, " << counter << "times" << std::endl;
+        if (isAlarm) {
+            ++counter;
+            std::cout << "[Alarm Thread] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
+            std::cout << "[Alarm Thread] " << "Warning condition approved, " << counter << "times" << std::endl;
+        }
+        
 
         cc->detected_class.clear();
 

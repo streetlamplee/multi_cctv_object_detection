@@ -31,11 +31,12 @@ int make_space(std::string& str) {
 
     while (ss.get(c)) {
         if (brackets.find(c) != std::string::npos && !isspace(c)) {     // 괄호 중 한개라면
-                str_result += ' ';
-                str_result += c;
-                str_result += ' ';
+            str_result += ' ';
+            str_result += c;
+            str_result += ' ';
+        } else {
+            str_result += c;
         }
-        str_result += c;
     }
     str = str_result;
     return 1;
@@ -47,7 +48,7 @@ int postfix(std::string& str) {
     std::stack<std::string> op;
     std::stringstream output;
     while (ss >> token) {
-        if (isdigit(token[0])) {
+        if (isdigit(token[0]) || token == "not") {
             output << token << " ";
         }
         else if (token == "and" || token == "or" || token == "(" || token == "{" || token == "[") {
@@ -58,6 +59,7 @@ int postfix(std::string& str) {
                 output << op.top() << " ";
                 op.pop();
             }
+            op.pop();
         }
         else if (token == "}") {
             while (!op.empty() && op.top() != "{") {
@@ -93,39 +95,42 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
         std::cerr << "Error: Cannot Open Config File" << std::endl;
         return -1;
     }
-    Alarm a;
+    Alarm* a = nullptr;
     std::string line;
     while (std::getline(conf, line)) {
-        if (start_with(line, "//") || start_with(line, "#") || start_with(line, "/")) {
+        if (start_with(line, "//") || start_with(line, "#") || start_with(line, "/") || line.empty()) {
             continue;
         }
 
-        // alarm conf 끝일 경우,
-        if (start_with(line, "[/")){
-            if (line.find(a.get_description(), 0) == 2){
-                alarms.push_back(a);
-            } else {
-                std::cerr << "Error : conf 파일 중, 정확하지 않은 End of Parser가 존재합니다." << std::endl;
-            }
-        }
+        // alarm conf 끝일 경우,        *피드백 : conf 종료 양식 삭제
+        // if (start_with(line, "[/")){
+        //     if (line.find(a->get_description(), 0) == 2){
+        //         alarms.push_back(*a);
+        //     } else {
+        //         std::cerr << "Error : conf 파일 중, 정확하지 않은 End of Parser가 존재합니다." << std::endl;
+        //     }
+        // }
         // alarm conf 시작할 경우
         else if (start_with(line, "[")){
-            a = Alarm();
+            if (a != nullptr) {
+                alarms.push_back(*a);
+            }
+            a = new Alarm();
             std::string desc = line;
             strip(desc);
-            a.set_description(desc);
+            a->set_description(desc);
         }
 
         else if (start_with(line, "risk_level")){
             std::vector<std::string> tokens;
             split(line, tokens, ':');
-            a.set_risk_level(std::stoi(tokens[1]));
+            a->set_risk_level(std::stoi(tokens[1]));
         }
 
         else {
             make_space(line);
             postfix(line);
-            a.set_condition(line);
+            a->set_condition(line);
         }
         
     }

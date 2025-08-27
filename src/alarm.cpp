@@ -29,9 +29,6 @@ int Alarm::get_risk_level(){
 }
 
 bool define_alarm (std::string condition, const std::vector<int>& detectedClass) {
-    if (detectedClass.empty()) {
-        return false;
-    }
     if (condition.empty()) {
         return false;
     }
@@ -40,10 +37,15 @@ bool define_alarm (std::string condition, const std::vector<int>& detectedClass)
     std::stringstream ss(condition);
     std::stack<bool> value_stack;
     std::string token;
+    bool isNot = false;
     while (ss >> token) {
         if (isdigit(token[0])) {
             bool t = (classElement.count(std::stoi(token)) != 0);
+            if (isNot) {
+                t = !t;
+            }
             value_stack.push(t);
+            isNot = false;
         }
         else if (token == "and") {
             bool val2 = value_stack.top();
@@ -60,6 +62,9 @@ bool define_alarm (std::string condition, const std::vector<int>& detectedClass)
             value_stack.pop();
 
             value_stack.push(val1 || val2);
+        }
+        else if (token == "not"){
+            isNot = true;
         }
     }
     return value_stack.top();
