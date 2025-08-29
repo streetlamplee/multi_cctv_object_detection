@@ -14,8 +14,8 @@
 struct CameraChannel {
     std::string rtsp_url;
     CCTV* cctv_instance = nullptr;
-    ThreadSafeStack<cv::Mat> raw_frame_stack{20};
-    ThreadSafeStack<cv::Mat> inference_frame_stack{10};
+    ThreadSafeStack<cv::Mat> raw_frame_stack{1};
+    ThreadSafeStack<cv::Mat> inference_frame_stack{1};
     ThreadSafeStack<std::vector<BBoxInfo>> results_stack;
     cv::Rect display_roi;
     std::vector<int> detected_class;
@@ -35,7 +35,7 @@ struct CameraChannel {
 };
 
 // --- Global Variables ---
-cv::Mat g_canvas(900, 1600, CV_8UC3, cv::Scalar(0, 0, 0));
+cv::Mat g_canvas(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
 std::mutex g_canvas_mutex;
 std::mutex g_alarm_mutex;
 bool g_running = true;
@@ -52,6 +52,7 @@ std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
 void producer(CameraChannel* channel) {
     channel->cctv_instance = new CCTV(channel->rtsp_url, &channel->raw_frame_stack);
     channel->cctv_instance->start_image_capture();
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 // Inference Worker: Performs object detection for a specific camera channel
@@ -61,6 +62,7 @@ void inference_worker(CameraChannel* channel, const cv::dnn::Net& net) {
         if (frame.empty() || !g_running) continue;
 
         cv::Mat frame_rgb;
+        if (cv::sum(frame) == cv::Scalar(0)) { continue; }
         cv::cvtColor(frame, frame_rgb, cv::COLOR_BGR2RGB);
 
         auto results = inference(net, frame_rgb);
@@ -112,10 +114,15 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                 }
 
                 if (!latest_frames[i].empty()) {
-                    cv::Mat resized_frame;
-                    cv::resize(latest_frames[i], resized_frame, channels[i]->display_roi.size());
-                    resized_frame.copyTo(g_canvas(channels[i]->display_roi));
+                    latest_frames[i].copyTo(g_canvas(channels[i]->display_roi));
                 }
+
+                // 0829 이현진 점유율 테스트
+                // if (!latest_frames[i].empty()){
+                //     cv::imshow("image", latest_frames[i]);
+                //     // std::cout << latest_frames[i].size << std::endl;
+                // }
+                
                 
                 channels[i]->detected_class.clear();
                 // Draw the latest bounding boxes to its ROI, applying the class filter
@@ -130,8 +137,8 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                         if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
                             cv::Rect box = det.box;
                             // IMPORTANT: Adjust resolution (e.g., 1920, 1080) for each camera if they differ
-                            float scale_x = (float)channels[i]->display_roi.width / 1920.0f;
-                            float scale_y = (float)channels[i]->display_roi.height / 1080.0f;
+                            float scale_x = (float)channels[i]->display_roi.width / 640.0f;
+                            float scale_y = (float)channels[i]->display_roi.height / 360.0f;
 
                             cv::Rect scaled_box;
                             scaled_box.x = channels[i]->display_roi.x + static_cast<int>(box.x * scale_x);
@@ -151,10 +158,15 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 
         // 3. Show the final canvas
         cv::imshow("NVR Stream - 4 Channels", g_canvas);
-        if (cv::waitKey(1) == 'q') {
+        if (cv::waitKey(10) == 'q') {
             g_running = false;
             cv::destroyAllWindows();
         }
+        
+        // 0829 이현진  CPU 점유율 test
+        // std::cout << "col : " << g_canvas.cols << ", row : " << g_canvas.rows << std::endl;
+        // std::cout << "some value: " << g_canvas.dims << std::endl;
+        // std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
 
@@ -198,16 +210,18 @@ void alarm_worker(CameraChannel* cc) {
 }
 
 int main(int argc, char* argv[]) {
+    std::cout << cv::getBuildInformation() << std::endl;
+
     // --- Configuration ---
     std::vector<std::unique_ptr<CameraChannel>> channels;
     // Define ROIs for a 2x2 grid
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0, 0, 800, 450)));
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(800, 0, 800, 450)));
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0, 450, 800, 450)));
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(800, 450, 800, 450)));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0, 0, 640, 360)));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(640, 0, 640, 360)));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0, 360, 640, 360)));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(640, 360, 640, 360)));
 
     // IMPORTANT: Set the correct RTSP URL for each camera
-    channels[0]->rtsp_url = "rtsp://admin:q1w2e3r4@192.168.1.100:554/Streaming/Channels/201/";
+    channels[0]->rtsp_url = "rtsp://admin:q1w2e3r4@192.168.1.100:554/Streaming/Channels/202/";
     channels[1]->rtsp_url = ""; 
     channels[2]->rtsp_url = ""; 
     channels[3]->rtsp_url = "";
@@ -223,13 +237,18 @@ int main(int argc, char* argv[]) {
     read_conf(config_path, g_alarms);
 
     // --- Start Threads ---
-    std::thread display_thread(display_manager, std::ref(channels));
+
 
     for (auto& channel : channels) {
         channel->producer_thread = std::thread(producer, channel.get());
+    }
+    for (auto& channel : channels) {
         channel->inference_thread = std::thread(inference_worker, channel.get(), std::ref(net));
+    }
+    for (auto& channel : channels) {
         channel->alarm_thread = std::thread(alarm_worker, channel.get());
     }
+    std::thread display_thread(display_manager, std::ref(channels));
 
     // --- Wait for Threads to Finish ---
     display_thread.join();

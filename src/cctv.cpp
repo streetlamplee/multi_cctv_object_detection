@@ -1,9 +1,20 @@
 #include "cctv.h"
 
-CCTV::CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat>* stack) : rtspURL(rtspURL), image_stack(stack) {}
+CCTV::CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat>* stack) : rtspURL(rtspURL), image_stack(stack) {
+
+}
 
 int CCTV::start_image_capture() {
-    cv::VideoCapture vicap = connectRTSP(this->rtspURL);
+
+    connectRTSP(this->rtspURL, this->vicap);
+    
+    // if (!this->vicap.set(cv::CAP_PROP_FRAME_WIDTH, 800)) {
+    //     std::cerr << "Cannot Set Width" << std::endl;
+    // }  // 원하는 너비로 설정
+    // if (!this->vicap.set(cv::CAP_PROP_FRAME_HEIGHT, 450)) {
+    //     std::cerr << "Cannot Set Height" << std::endl;
+    // }
+
 
     if (!vicap.isOpened()){
         std::cerr << "Failed to open video stream" << std::endl;
@@ -12,14 +23,16 @@ int CCTV::start_image_capture() {
 
     while(true){
         cv::Mat frame;
-        if (vicap.read(frame)){
+        cv::Mat frame_resized;
+        if (this->vicap.read(frame)){
+            // cv::resize(frame, frame_resized, cv::Size(800, 450));
             this->image_stack->push(frame);
             // std::cout << "image push done" << std::endl;    
         } else {
             std::cerr<< "Cannot read frame, try to reconnect..." << std::endl;
-            vicap.release();
-            vicap = connectRTSP(this->rtspURL);
-            if (!vicap.isOpened()){
+            this->vicap.release();
+            connectRTSP(this->rtspURL, this->vicap);
+            if (!this->vicap.isOpened()){
                 std::cerr << "Reconnection Failed" << std::endl;
                 break;
             }
