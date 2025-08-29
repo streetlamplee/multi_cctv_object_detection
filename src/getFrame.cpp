@@ -3,7 +3,7 @@
 
 cv::VideoCapture connectRTSP(std::string url){
 
-    cv::VideoCapture cap(url);
+    cv::VideoCapture cap(url, cv::CAP_FFMPEG);
 
     if(!cap.isOpened()) {
         std::cerr<< "Cannot Open Video";
