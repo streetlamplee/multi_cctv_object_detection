@@ -13,7 +13,10 @@ add_executable(app
     src/getFrame.cpp
     src/inference.cpp
     src/alarm.cpp
-    src/read_config.cpp
+    src/Handler.cpp
+    src/configHandler.cpp
+    src/WindowHandler.cpp
+    src/iniHandler.cpp
 )
 
 target_include_directories(app PRIVATE

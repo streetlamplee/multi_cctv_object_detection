@@ -17,21 +17,18 @@ int connectRTSP(std::string url, cv::VideoCapture& cap){
     return 1;
 }
 
-int getFrame_api(int channel, cv::Mat& frame) {
-    std::string user = "admin";
-    std::string password = "q1w2e3r4";
-
-    httplib::Client cli("192.168.1.100", 80);
-    cli.set_digest_auth("admin", "q1w2e3r4");
+int getFrame_api(std::string user, std::string password, std::string ip, int port, int channel, int width, int height, cv::Mat& frame) {
+    httplib::Client cli(ip, port);
+    cli.set_digest_auth(user, password);
 
     auto res = cli.Get("/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=704&videoResolutionHeight=480");
     if (res && res->status == 200) {
         
         std::vector<char> imageData (res->body.begin(), res->body.end());
         frame = cv::imdecode(imageData, cv::IMREAD_COLOR);
-        cv::resize(frame, frame, cv::Size(704, 480));
+        cv::resize(frame, frame, cv::Size(width, height));
         if (frame.empty()) {
-            frame = cv::Mat::zeros(480, 704, CV_8SC3);
+            frame = cv::Mat::zeros(height, width, CV_8SC3);
         }
         cli.stop();
         return 1;
@@ -39,7 +36,7 @@ int getFrame_api(int channel, cv::Mat& frame) {
     } else {
         auto err = res.error();
         // std::cerr << "Error: " << err << std::endl;
-        frame = cv::Mat::zeros(480, 704, CV_8SC3);
+        frame = cv::Mat::zeros(height, width, CV_8SC3);
         cli.stop();
         return 0;
     }
