@@ -17,17 +17,31 @@ int connectRTSP(std::string url, cv::VideoCapture& cap){
     return 1;
 }
 
-cv::Mat getFrame(cv::VideoCapture& cap) {
-        
-    cv::Mat frame;
-    if(!cap.read(frame)){
-        std::cerr<< "Cannot Open frame from Video stream";
-        return cv::Mat();
-    
-    }
-    cv::resize(frame, frame, cv::Size(450, 800));
+int getFrame_api(int channel, cv::Mat& frame) {
+    std::string user = "admin";
+    std::string password = "q1w2e3r4";
 
-    // cv::imshow("", frame);
-    // cv::waitKey(0);
-    return frame;
+    httplib::Client cli("192.168.1.100", 80);
+    cli.set_digest_auth("admin", "q1w2e3r4");
+
+    auto res = cli.Get("/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=704&videoResolutionHeight=480");
+    if (res && res->status == 200) {
+        
+        std::vector<char> imageData (res->body.begin(), res->body.end());
+        frame = cv::imdecode(imageData, cv::IMREAD_COLOR);
+        cv::resize(frame, frame, cv::Size(704, 480));
+        if (frame.empty()) {
+            frame = cv::Mat::zeros(480, 704, CV_8SC3);
+        }
+        cli.stop();
+        return 1;
+         
+    } else {
+        auto err = res.error();
+        // std::cerr << "Error: " << err << std::endl;
+        frame = cv::Mat::zeros(480, 704, CV_8SC3);
+        cli.stop();
+        return 0;
+    }
+
 }

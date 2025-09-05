@@ -89,3 +89,4 @@ test/
 .vscode/
 lib/
 lib/*
+sysroot/

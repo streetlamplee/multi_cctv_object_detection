@@ -13,6 +13,7 @@
 // A structure to hold all resources for a single camera channel
 struct CameraChannel {
     std::string rtsp_url;
+    int channel_num;
     CCTV* cctv_instance = nullptr;
     ThreadSafeStack<cv::Mat> raw_frame_stack{1};
     ThreadSafeStack<cv::Mat> inference_frame_stack{1};
@@ -25,7 +26,7 @@ struct CameraChannel {
     std::thread alarm_thread;
 
     // Constructor to initialize the ROI
-    CameraChannel(cv::Rect roi) : display_roi(roi) {}
+    CameraChannel(cv::Rect roi, int ch_num) : display_roi(roi), channel_num(ch_num) {}
     // Cleanup function
     ~CameraChannel() {
         if (cctv_instance) {
@@ -35,7 +36,7 @@ struct CameraChannel {
 };
 
 // --- Global Variables ---
-cv::Mat g_canvas(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
+cv::Mat g_canvas(960, 1408, CV_8UC3, cv::Scalar(0, 0, 0));
 std::mutex g_canvas_mutex;
 std::mutex g_alarm_mutex;
 bool g_running = true;
@@ -50,9 +51,15 @@ std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
 
 // Producer: Captures frames from a specific camera channel
 void producer(CameraChannel* channel) {
-    channel->cctv_instance = new CCTV(channel->rtsp_url, &channel->raw_frame_stack);
-    channel->cctv_instance->start_image_capture();
+    // channel->cctv_instance = new CCTV(channel->rtsp_url, &channel->raw_frame_stack);
+    // channel->cctv_instance->start_image_capture();
     // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    cv::Mat frame;
+    while(g_running){
+        getFrame_api(channel->channel_num, frame);
+        channel->raw_frame_stack.push(frame);
+    }
+    
 }
 
 // Inference Worker: Performs object detection for a specific camera channel
@@ -76,14 +83,26 @@ void inference_worker(CameraChannel* channel, const cv::dnn::Net& net) {
 void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
     std::vector<cv::Mat> latest_frames(channels.size());
     std::vector<std::vector<BBoxInfo>> latest_results(channels.size());
+    // 0903 fps 테스트용
+    bool isUpdated = false;
+    int frame_count = 0;
+    auto start = std::chrono::high_resolution_clock::now();
 
     while (g_running) {
+        isUpdated = false;
         // 1. Gather latest frames and results from all channels (non-blocking)
         for (size_t i = 0; i < channels.size(); ++i) {
             if (channels[i]->raw_frame_stack.try_pop(latest_frames[i])) {
-                if (!latest_frames[i].empty()) {
+                if (!latest_frames[i].empty() && cv::sum(latest_frames[i]) != cv::Scalar(0)) {
                     channels[i]->inference_frame_stack.push(latest_frames[i].clone());
+                    isUpdated = true;
                 }
+                else {
+                    
+                }
+            }
+            else {
+                
             }
             channels[i]->results_stack.try_pop(latest_results[i]);
         }
@@ -137,8 +156,8 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                         if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
                             cv::Rect box = det.box;
                             // IMPORTANT: Adjust resolution (e.g., 1920, 1080) for each camera if they differ
-                            float scale_x = (float)channels[i]->display_roi.width / 640.0f;
-                            float scale_y = (float)channels[i]->display_roi.height / 360.0f;
+                            float scale_x = (float)channels[i]->display_roi.width / 704.0f;
+                            float scale_y = (float)channels[i]->display_roi.height / 480.0f;
 
                             cv::Rect scaled_box;
                             scaled_box.x = channels[i]->display_roi.x + static_cast<int>(box.x * scale_x);
@@ -158,10 +177,22 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 
         // 3. Show the final canvas
         cv::imshow("NVR Stream - 4 Channels", g_canvas);
-        if (cv::waitKey(10) == 'q') {
+        if (cv::waitKey(100) == 'q') {
             g_running = false;
             cv::destroyAllWindows();
         }
+
+        //0903 fps 테스트용
+        
+        
+        if (isUpdated){
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = end - start;
+        std::cout << "frame count: " << ++frame_count << std::endl;
+        std::cout << "Elapsed Time: " << diff.count() << "seconds" << std::endl;
+        std::cout << "fps: " << static_cast<double>(frame_count / diff.count()) << std::endl;
+        }
+        
         
         // 0829 이현진  CPU 점유율 test
         // std::cout << "col : " << g_canvas.cols << ", row : " << g_canvas.rows << std::endl;
@@ -209,16 +240,23 @@ void alarm_worker(CameraChannel* cc) {
     }
 }
 
+int main1(int argc, char* argv[]) {
+    cv::Mat frame1;
+    getFrame_api(201, frame1);
+
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
-    std::cout << cv::getBuildInformation() << std::endl;
+    // std::cout << cv::getBuildInformation() << std::endl;
 
     // --- Configuration ---
     std::vector<std::unique_ptr<CameraChannel>> channels;
     // Define ROIs for a 2x2 grid
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0, 0, 640, 360)));
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(640, 0, 640, 360)));
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0, 360, 640, 360)));
-    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(640, 360, 640, 360)));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0,  0,  704, 480), 0));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(704,0,  704, 480), 202));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(0,  480,704, 480), 0));
+    channels.push_back(std::make_unique<CameraChannel>(cv::Rect(704,480,704, 480), 0));
 
     // IMPORTANT: Set the correct RTSP URL for each camera
     channels[0]->rtsp_url = "rtsp://admin:q1w2e3r4@192.168.1.100:554/Streaming/Channels/202/";
@@ -241,11 +279,9 @@ int main(int argc, char* argv[]) {
 
     for (auto& channel : channels) {
         channel->producer_thread = std::thread(producer, channel.get());
-    }
-    for (auto& channel : channels) {
+
         channel->inference_thread = std::thread(inference_worker, channel.get(), std::ref(net));
-    }
-    for (auto& channel : channels) {
+
         channel->alarm_thread = std::thread(alarm_worker, channel.get());
     }
     std::thread display_thread(display_manager, std::ref(channels));
