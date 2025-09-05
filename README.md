@@ -2,7 +2,7 @@
 
 ## 사용방법
 
-bash```
+```bash
 mkdir build && cd build
 cmake .. && make
 cp -r ../resource ./resource
