@@ -1,4 +1,5 @@
 #include "thread_safe_stack.h"
+#include "thread_safe_queue.h"
 #include "cctv.h"
 #include "inference.h"
 #include <thread>
@@ -12,18 +13,29 @@
 #include "iniHandler.h"
 #include <sstream>
 
+
+
+// --- Global Variables ---
+cv::Mat g_canvas;
+std::mutex g_canvas_mutex;
+std::mutex g_alarm_mutex;
+bool g_running = true;
+std::vector<Alarm> g_alarms;
+std::unordered_map<std::string, std::string> g_ini;
+int g_queueMaxSize = 5;
+
 // A structure to hold all resources for a single camera channel
 struct CameraChannel {
     int channel_number;
     CCTV* cctv_instance = nullptr;
-    ThreadSafeStack<cv::Mat> raw_frame_stack{1};
-    ThreadSafeStack<cv::Mat> inference_frame_stack{1};
-    ThreadSafeStack<std::vector<BBoxInfo>> results_stack;
+    ThreadSafeQueue<cv::Mat> raw_frame_queue{g_queueMaxSize};
+    ThreadSafeQueue<cv::Mat> inference_frame_queue{g_queueMaxSize};
+    ThreadSafeQueue<std::vector<BBoxInfo>> results_queue{g_queueMaxSize};
     cv::Rect display_roi;
     std::vector<int> detected_class;
     int alarm = 0;
     std::thread producer_thread;
-    std::thread inference_thread;
+    std::thread inference_alarm_thread;
     std::thread alarm_thread;
 
     // Constructor to initialize the ROI
@@ -36,15 +48,6 @@ struct CameraChannel {
         }
     }
 };
-
-// --- Global Variables ---
-cv::Mat g_canvas;
-std::mutex g_canvas_mutex;
-std::mutex g_alarm_mutex;
-bool g_running = true;
-std::vector<Alarm> g_alarms;
-std::unordered_map<std::string, std::string> g_ini;
-
 
 // --- Configuration ---
 std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
@@ -65,31 +68,79 @@ void producer(CameraChannel* channel) {
     int width = std::stoi(g_ini.at("window_width")) / std::stoi(g_ini.at("window_col"));
     int height = std::stoi(g_ini.at("window_height")) / std::stoi(g_ini.at("window_row"));
     while(g_running){
+        if (channel->raw_frame_queue.size() >= g_queueMaxSize) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));    
+            continue;
+        }
         getFrame_api(id, password, ip, port, channel->channel_number, width, height, frame);
-        channel->raw_frame_stack.push(frame);
+        channel->raw_frame_queue.push(frame);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     
 }
 
 // Inference Worker: Performs object detection for a specific camera channel
-void inference_worker(CameraChannel* channel, const cv::dnn::Net& net) {
+void inference_alarm_worker(CameraChannel* channel, const std::string net_path) {
+    std::vector<Alarm> local_alarms = g_alarms;
+    std::string alarm_condition = "";
+    int counter = 0;
+    cv::dnn::Net net = cv::dnn::readNet(net_path);
+    if (net.empty()) {
+        std::cerr << "Error: Cannot load ONNX model" << std::endl;
+        return;
+    }
     while (g_running) {
-        cv::Mat frame = channel->inference_frame_stack.wait_and_pop();
-        if (frame.empty() || !g_running) continue;
+        cv::Mat frame;
+        int risk_level = 0;
+        bool isAlarm = false;
+
+        channel->detected_class.clear();
+        channel->inference_frame_queue.try_pop(frame);
+        if (frame.empty() || !g_running) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            continue;
+        }
 
         cv::Mat frame_rgb;
         if (cv::sum(frame) == cv::Scalar(0)) { continue; }
         cv::cvtColor(frame, frame_rgb, cv::COLOR_BGR2RGB);
 
         auto results = inference(net, frame_rgb);
-        channel->results_stack.push(results);
+        channel->results_queue.push(results);
+        for (auto& det: results) {
+            channel->detected_class.push_back(det.classID);
+        }
+        
+        for (Alarm alarm : local_alarms) {
+            std::string condition = alarm.get_condition();
+            {
+                std::lock_guard<std::mutex> lock(g_alarm_mutex);
+                std::vector<int> detectedClass = channel->detected_class;
+                if (alarm.get_risk_level() < risk_level) { 
+                    continue;
+                }
+                if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
+                    isAlarm = true;
+                    risk_level = alarm.get_risk_level();
+                    alarm_condition = condition;
+
+                }
+                channel->alarm = risk_level;
+            }
+        }
+        if (isAlarm) {
+            ++counter;
+            
+        }
+        std::cout << "[Alarm Thread] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
+        std::cout << "[Alarm Thread] " << "Warning condition approved, " << counter << "times" << std::endl;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
 // Display: Manages the main canvas, drawing frames and results from all channels
-void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
+void canvas_painter(std::vector<std::unique_ptr<CameraChannel>>& channels) {
     std::vector<cv::Mat> latest_frames(channels.size());
     std::vector<std::vector<BBoxInfo>> latest_results(channels.size());
     // 0903 fps 테스트용
@@ -110,19 +161,19 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
         cv::Scalar color_anchor;
         cv::Scalar color_boundary;
         for (size_t i = 0; i < channels.size(); ++i) {
-            if (channels[i]->raw_frame_stack.try_pop(latest_frames[i])) {
+            if (channels[i]->raw_frame_queue.try_pop(latest_frames[i])) {
                 if (!latest_frames[i].empty() && cv::sum(latest_frames[i]) != cv::Scalar(0)) {
-                    channels[i]->inference_frame_stack.push(latest_frames[i].clone());
+                    channels[i]->inference_frame_queue.push(latest_frames[i].clone());
                     // isUpdated = true;
                 }
                 else {
-                    
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 }
             }
             else {
-                
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
-            channels[i]->results_stack.try_pop(latest_results[i]);
+            channels[i]->results_queue.try_pop(latest_results[i]);
         }
 
         // 2. Lock the canvas and draw everything
@@ -160,15 +211,11 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                 // }
                 
                 
-                channels[i]->detected_class.clear();
                 // Draw the latest bounding boxes to its ROI, applying the class filter
                 // alarm 테두리 빨간 색 처리 코드   
                 cv::rectangle(g_canvas, channels[i]->display_roi, color_boundary, 3);
                 if (!latest_results[i].empty()) {
                     for (const auto& det : latest_results[i]) {
-
-                        channels[i]->detected_class.push_back(det.classID);
-                    
                         // FILTERING LOGIC: Check if the classID is in the allowed list
                         if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
                             cv::Rect box = det.box;
@@ -188,18 +235,10 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
                         }
                     }
                 }
-                
             }
         }
 
-        // 3. Show the final canvas
-        std::stringstream ss_title;
-        ss_title <<"NVR Stream - " << std::stoi(g_ini.at("window_row")) * std::stoi(g_ini.at("window_col")) << " Channels";
-        cv::imshow(ss_title.str(), g_canvas);
-        if (cv::waitKey(100) == 'q') {
-            g_running = false;
-            cv::destroyAllWindows();
-        }
+
 
         //0903 fps 테스트용
 
@@ -215,47 +254,62 @@ void display_manager(std::vector<std::unique_ptr<CameraChannel>>& channels) {
         // 0829 이현진  CPU 점유율 test
         // std::cout << "col : " << g_canvas.cols << ", row : " << g_canvas.rows << std::endl;
         // std::cout << "some value: " << g_canvas.dims << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
     
 }
 
-void alarm_worker(CameraChannel* cc) {
-    std::vector<Alarm> local_alarms = g_alarms;
-    std::string alarm_condition = "";
-    int counter = 0;
-    
-    while(g_running) {
-        int risk_level = 0;
-        bool isAlarm = false;
-        for (Alarm alarm : local_alarms) {
-            std::string condition = alarm.get_condition();
-            {
-                std::lock_guard<std::mutex> lock(g_alarm_mutex);
-                std::vector<int> detectedClass = cc->detected_class;
-                if (alarm.get_risk_level() < risk_level) { 
-                    continue;
-                }
-                if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
-                    isAlarm = true;
-                    risk_level = alarm.get_risk_level();
-                    alarm_condition = condition;
+// void alarm_worker(CameraChannel* cc) {
+//     std::vector<Alarm> local_alarms = g_alarms;
+//     std::string alarm_condition = "";
+//     int counter = 0;
+//    
+//     while(g_running) {
+//         int risk_level = 0;
+//         bool isAlarm = false;
+//         for (Alarm alarm : local_alarms) {
+//             std::string condition = alarm.get_condition();
+//             {
+//                 std::lock_guard<std::mutex> lock(g_alarm_mutex);
+//                 std::vector<int> detectedClass = cc->detected_class;
+//                 if (alarm.get_risk_level() < risk_level) { 
+//                     continue;
+//                 }
+//                 if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
+//                     isAlarm = true;
+//                     risk_level = alarm.get_risk_level();
+//                     alarm_condition = condition;
+//
+//                 }
+//                 cc->alarm = risk_level;
+//             }
+//         }
+//         if (isAlarm) {
+//             ++counter;
+//            
+//         }
+//         std::cout << "[Alarm Thread] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
+//         std::cout << "[Alarm Thread] " << "Warning condition approved, " << counter << "times" << std::endl;
+//
+//         cc->detected_class.clear();
+//
+//         std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+//
+//     }
+// }
 
-                }
-                cc->alarm = risk_level;
-            }
+void image_show_worker() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::stringstream ss_title;
+    ss_title <<"NVR Stream - " << std::stoi(g_ini.at("window_row")) * std::stoi(g_ini.at("window_col")) << " Channels";
+    while (g_running) {
+        {
+            // std::lock_guard<std::mutex> lock(g_canvas_mutex);
+            cv::imshow(ss_title.str(), g_canvas);
         }
-        if (isAlarm) {
-            ++counter;
-            std::cout << "[Alarm Thread] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
-            std::cout << "[Alarm Thread] " << "Warning condition approved, " << counter << "times" << std::endl;
+        if (cv::waitKey(1000) == 'q') {
+            g_running = false;
+            cv::destroyAllWindows();
         }
-        
-
-        cc->detected_class.clear();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-
     }
 }
 
@@ -286,11 +340,7 @@ int main(int argc, char* argv[]) {
     std::string onnx_path = "./resource/yolov8n.onnx";
     std::string config_path = "./resource/alarm.conf";
     std::string ini_path = "./resource/app.ini";
-    cv::dnn::Net net = cv::dnn::readNet(onnx_path);
-    if (net.empty()) {
-        std::cerr << "Error: Cannot load ONNX model" << std::endl;
-        return -1;
-    }
+
     read_conf(config_path, g_alarms);
     read_ini(ini_path, g_ini);
 
@@ -327,20 +377,23 @@ int main(int argc, char* argv[]) {
     for (auto& channel : channels) {
         channel->producer_thread = std::thread(producer, channel.get());
 
-        channel->inference_thread = std::thread(inference_worker, channel.get(), std::ref(net));
+        channel->inference_alarm_thread = std::thread(inference_alarm_worker, channel.get(), onnx_path);
 
-        channel->alarm_thread = std::thread(alarm_worker, channel.get());
+        // channel->alarm_thread = std::thread(alarm_worker, channel.get());
     }
-    std::thread display_thread(display_manager, std::ref(channels));
+    std::thread painter_thread(canvas_painter, std::ref(channels));
+    std::thread imageshow_thread(image_show_worker);
 
     // --- Wait for Threads to Finish ---
-    display_thread.join();
     for (auto& channel : channels) {
         channel->producer_thread.join();
-        channel->inference_thread.join();
-        channel->alarm_thread.join();
+        channel->inference_alarm_thread.join();
+        // channel->alarm_thread.join();
 
     }
+    painter_thread.join();
+    imageshow_thread.join();
+
 
     return 0;
 }

@@ -35,7 +35,7 @@ int getFrame_api(std::string user, std::string password, std::string ip, int por
          
     } else {
         auto err = res.error();
-        // std::cerr << "Error: " << err << std::endl;
+        std::cerr << "Error: " << err << std::endl;
         frame = cv::Mat::zeros(height, width, CV_8SC3);
         cli.stop();
         return 0;

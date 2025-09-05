@@ -15,7 +15,7 @@ template<typename T>
 class ThreadSafeQueue {
 public:
     ThreadSafeQueue() = default;
-    ThreadsafeQueue(int maxSize) : max_size(maxSize) {}
+    ThreadSafeQueue(int maxSize) : max_size(maxSize) {}
     ~ThreadSafeQueue() = default;
 
     // 복사 및 이동 생성자/대입 연산자 삭제
@@ -36,16 +36,32 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
 
         // max_size가 설정되어 있고, 큐가 가득 찼는지 확인합니다.
-        if (max_size > 0 && queue_.size() >= max_size) {
-            // 가장 오래된 아이템(큐의 맨 앞)을 제거합니다.
-            queue_.pop();
+        if (max_size > 0 && queue_.size() < max_size) {
+            
+            // 새로운 아이템을 큐의 맨 뒤에 추가합니다.
+            queue_.push(std::move(item));
+            
+            // 아이템 추가를 기다리는 스레드(wait_and_pop)가 있다면 깨웁니다.
+            cond_.notify_one();
         }
-
-        // 새로운 아이템을 큐의 맨 뒤에 추가합니다.
-        queue_.push(std::move(item));
+        // 가득차면 그냥 넣지 않습니다.
         
-        // 아이템 추가를 기다리는 스레드(wait_and_pop)가 있다면 깨웁니다.
-        cond_.notify_one();
+    }
+
+    /**
+     * @brief 큐의 맨 앞에서 아이템을 꺼냅니다. 큐가 비어있으면 즉시 false를 반환합니다.
+     * * @param item 큐에서 꺼낸 아이템을 저장할 변수
+     * @return true 아이템을 성공적으로 가져왔으면
+     * @return false 큐가 비어있으면
+     */
+     bool try_pop(T& item) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (queue_.empty()) {
+            return false;
+        }
+        item = std::move(queue_.front());
+        queue_.pop();
+        return true;
     }
 
     /**
@@ -87,7 +103,7 @@ private:
     mutable std::mutex mutex_; 
     std::queue<T> queue_;
     std::condition_variable cond_;
-    int max_size = -1;
+    int max_size=-1;
 };
 
 #endif // THREAD_SAFE_QUEUE_H

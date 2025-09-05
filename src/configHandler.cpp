@@ -48,6 +48,10 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
         }
         
     }
+
+    if (conf.eof()) {
+        alarms.push_back(*a);
+    }
     return 1;
 
 }
