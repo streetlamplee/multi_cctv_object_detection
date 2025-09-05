@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Created by https://www.toptal.com/developers/gitignore/api/c++,c,cmake,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=c++,c,cmake,visualstudiocode
 
@@ -15,11 +16,26 @@
 *.ilk
 *.map
 *.exp
+=======
+# Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,c++,opencv,cmake
+# Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,c++,opencv,cmake
+
+### C++ ###
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+>>>>>>> dev
 
 # Precompiled Headers
 *.gch
 *.pch
 
+<<<<<<< HEAD
 # Libraries
 *.lib
 *.a
@@ -64,6 +80,12 @@ dkms.conf
 # Precompiled Headers
 
 # Compiled Dynamic libraries
+=======
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+>>>>>>> dev
 
 # Fortran module files
 *.mod
@@ -71,8 +93,14 @@ dkms.conf
 
 # Compiled Static libraries
 *.lai
+*.la
+*.a
+*.lib
 
 # Executables
+*.exe
+*.out
+*.app
 
 ### CMake ###
 CMakeLists.txt.user
@@ -93,6 +121,15 @@ CMakeUserPresets.json
 # External projects
 *-prefix/
 
+### OpenCV ###
+#OpenCV for Mac and Linux
+#build and release folders
+*/CMakeFiles
+*/CMakeCache.txt
+*/Makefile
+*/cmake_install.cmake
+.DS_Store
+
 ### VisualStudioCode ###
 .vscode/*
 !.vscode/settings.json
@@ -112,4 +149,13 @@ CMakeUserPresets.json
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/c++,c,cmake,visualstudiocode
+# End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,c++,opencv,cmake
+build/*
+build/resource/
+test/
+test/*
+.vscode/
+sysroot/
+sysroot/*
+.editorconfig
+lib/
