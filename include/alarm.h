@@ -3,10 +3,9 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
-#include "json.hpp"
-using json = nlohmann::json;
 #include <algorithm>
 #include <stack>
 
@@ -32,5 +31,3 @@ private:
 };
 
 bool define_alarm (std::string condition, const std::vector<int>& detectedClass);
-
-bool define_alarm_json(const json& AlarmSetting, const std::vector<int>& detectedClass);

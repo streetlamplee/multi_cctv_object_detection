@@ -57,20 +57,18 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
 }
 
 
-int read_config_json(std::string json_path, json& config) {
-    std::ifstream configFile(json_path);
-    if (!configFile.is_open()) {
-        std::cerr << "Error: Cannot Open Config File" << std::endl;
-        return -1;
-    }
-
-    try {
-        config = json::parse(configFile);
-    }
-    catch (json::parse_error& e) {
-        std::cerr << "JSON 파싱 오류 : " << e.what() << std::endl;
-        return -1;
-    }
-
-    return 1;
-}
+// int read_config_json(std::string json_path, json& config) {
+//     std::ifstream configFile(json_path);
+//     if (!configFile.is_open()) {
+//         std::cerr << "Error: Cannot Open Config File" << std::endl;
+//         return -1;
+//     }
+//     try {
+//         config = json::parse(configFile);
+//     }
+//     catch (json::parse_error& e) {
+//         std::cerr << "JSON 파싱 오류 : " << e.what() << std::endl;
+//         return -1;
+//     }
+//     return 1;
+// }

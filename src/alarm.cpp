@@ -70,39 +70,39 @@ bool define_alarm (std::string condition, const std::vector<int>& detectedClass)
     return value_stack.top();
 }
 
-bool define_alarm_json(const json& AlarmSetting, const std::vector<int>& detectedClass) {
-    if (detectedClass.empty()) {
-        return false;
-    }
-
-    bool result = false;
-    std::unordered_set<int> classElement(detectedClass.begin(), detectedClass.end());
-
-    // or 조건 여부 파악
-    for (const auto& alarm : AlarmSetting.items()) {
-        json cond = alarm.value();
-        std::vector<bool> sub_goal;
-
-        // 내부 class 포함/불포함 여부
-        for (const auto& c : cond.items()) {
-            int target_class = std::stoi(c.key());
-            bool is_alarm_if_exsit = c.value();
-
-            if (is_alarm_if_exsit == (classElement.count(target_class) != 0)) {
-                sub_goal.push_back(true);
-            } else {
-                sub_goal.push_back(false);
-            }
-        }
-        if (std::find(sub_goal.begin(), sub_goal.end(), false) == sub_goal.end()) {
-            result = true;
-            std::cout << "Alarm Class : " << cond.flatten() << std::endl;
-            std::cout << "detected Class : ";
-            for (auto& e : classElement) {
-                std::cout << e << ", ";
-            }
-            std::cout << std::endl;
-        }
-    }
-    return result;
-}
+// bool define_alarm_json(const json& AlarmSetting, const std::vector<int>& detectedClass) {
+//     if (detectedClass.empty()) {
+//         return false;
+//     }
+//
+//     bool result = false;
+//     std::unordered_set<int> classElement(detectedClass.begin(), detectedClass.end());
+//
+//     // or 조건 여부 파악
+//     for (const auto& alarm : AlarmSetting.items()) {
+//         json cond = alarm.value();
+//         std::vector<bool> sub_goal;
+//
+//         // 내부 class 포함/불포함 여부
+//         for (const auto& c : cond.items()) {
+//             int target_class = std::stoi(c.key());
+//             bool is_alarm_if_exsit = c.value();
+//
+//             if (is_alarm_if_exsit == (classElement.count(target_class) != 0)) {
+//                 sub_goal.push_back(true);
+//             } else {
+//                 sub_goal.push_back(false);
+//             }
+//         }
+//         if (std::find(sub_goal.begin(), sub_goal.end(), false) == sub_goal.end()) {
+//             result = true;
+//             std::cout << "Alarm Class : " << cond.flatten() << std::endl;
+//             std::cout << "detected Class : ";
+//             for (auto& e : classElement) {
+//                 std::cout << e << ", ";
+//             }
+//             std::cout << std::endl;
+//         }
+//     }
+//     return result;
+// }
