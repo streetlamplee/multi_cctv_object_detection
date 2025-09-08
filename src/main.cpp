@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <mutex>
+#include <semaphore.h>
 #include <chrono>
 #include <algorithm> // Required for std::find
 #include "configHandler.h"
@@ -13,6 +14,7 @@
 #include "iniHandler.h"
 #include <sstream>
 #include <filesystem>
+#include <iomanip>      // std::setw, std::setfill
 
 
 
@@ -24,6 +26,10 @@ bool g_running = true;
 std::vector<Alarm> g_alarms;
 std::unordered_map<std::string, std::string> g_ini;
 int g_queueMaxSize = 5;
+sem_t *g_sem_image;
+sem_t *g_sem_inference;
+const char* get_image_sem_name = "/get_image";
+const char* infer_sem_name = "/inference";
 
 // A structure to hold all resources for a single camera channel
 struct CameraChannel {
@@ -37,6 +43,7 @@ struct CameraChannel {
     std::vector<int> detected_class;
     int alarm = 0;
     std::thread routine_thread;
+    // pthread_t routine_thread;
     std::thread producer_thread;            // 0908 : not used
     std::thread inference_alarm_thread;     // 0908 : not used
     std::thread alarm_thread;               // 0908 : not used
@@ -54,7 +61,6 @@ struct CameraChannel {
 
 // --- Configuration ---
 std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
-
 
 // --- Thread Functions ---
 
@@ -78,8 +84,16 @@ void routine(CameraChannel* channel, std::string net_path){
 
     while (g_running) {
         // NVR 접속 후, channel에 맞게 데이터 가져오기
+        // std::cout << "[Thread " << channel->CameraChannelID << "] semaphore 할당 준비" << std::endl;
+        sem_wait(g_sem_image);
+        
+
         getFrame_api(id, password, ip, port, channel->channel_number, width, height, frame);
 
+        // std::cout << "[Thread " << channel->CameraChannelID << "] semaphore 할당 해제" << std::endl;
+        sem_post(g_sem_image);
+        
+        
         // 추론 process
         int risk_level = 0;
         bool isAlarm = false;
@@ -92,9 +106,12 @@ void routine(CameraChannel* channel, std::string net_path){
 
         cv::Mat frame_rgb;
         if (cv::sum(frame) == cv::Scalar(0)) { continue; }
-        cv::cvtColor(frame, frame_rgb, cv::COLOR_BGR2RGB);
 
+        sem_wait(g_sem_inference);
+        cv::cvtColor(frame, frame_rgb, cv::COLOR_BGR2RGB);
         auto results = inference(net, frame_rgb);
+        sem_post(g_sem_inference);
+        
         // channel->results_queue.push(results);
         for (auto& det: results) {
             channel->detected_class.push_back(det.classID);
@@ -108,93 +125,93 @@ void routine(CameraChannel* channel, std::string net_path){
 
         for (Alarm alarm : local_alarms) {
             std::string condition = alarm.get_condition();
-            {
-                std::lock_guard<std::mutex> lock(g_alarm_mutex);
-                if (alarm.get_risk_level() < risk_level) { 
-                    continue;
-                }
-                if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
-                    isAlarm = true;
-                    risk_level = alarm.get_risk_level();
-                    alarm_condition = condition;
-
-                }
-                channel->alarm = risk_level;
+            
+            
+            if (alarm.get_risk_level() < risk_level) { 
+                continue;
             }
+            if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
+                isAlarm = true;
+                risk_level = alarm.get_risk_level();
+                alarm_condition = condition;
+
+            }
+            channel->alarm = risk_level;
+            
         }
         if (isAlarm) {
             ++counter;
             
         }
-        std::cout << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
-        std::cout << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
+        std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
+        std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
 
         // 추론 후, 그림 그리기
         cv::Scalar color_anchor;
         cv::Scalar color_boundary;
         
         // 2. Lock the canvas and draw everything
-        {
-            std::lock_guard<std::mutex> lock(g_canvas_mutex);
-            std::lock_guard<std::mutex> lock2(g_alarm_mutex);
-
-                // Draw the latest frame to its ROI
-
-
-                // alarm 발생 시, 빨간 색, 아닐 시 초록 색
-
-            if (channel->alarm == 0){
-                color_anchor = cv::Scalar(0,255,0);
-                color_boundary = cv::Scalar(255,255,255);
-
-            } else if (channel->alarm == 1) {
-                color_anchor = cv::Scalar(0,0,255);
-                color_boundary = cv::Scalar(255,255,255);
-
-            } else if (channel->alarm == 2){
-                color_anchor = cv::Scalar(0,0,255);
-                color_boundary = cv::Scalar(0,0,255);
-            }
-
-            // 0829 이현진 점유율 테스트
-            // if (!latest_frames[i].empty()){
-            //     cv::imshow("image", latest_frames[i]);
-            //     // std::cout << latest_frames[i].size << std::endl;
-            // }
-            
-            
-            // Draw the latest bounding boxes to its ROI, applying the class filter
-            // alarm 테두리 빨간 색 처리 코드   
-            cv::rectangle(frame, cv::Rect(0,0,width, height), color_boundary, 3);
-            
-            for (const auto& det : results) {
-                // FILTERING LOGIC: Check if the classID is in the allowed list
-                if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
-                    cv::Rect box = det.box;
-                    // IMPORTANT: Adjust resolution (e.g., 1920, 1080) for each camera if they differ
-                    // float scale_x = (float)channel->display_roi.width / (std::stof(g_ini.at("window_width")) / std::stof(g_ini.at("window_col")));
-                    // float scale_y = (float)channel->display_roi.height / (std::stof(g_ini.at("window_height")) / std::stof(g_ini.at("window_row")));
-
-                    // cv::Rect scaled_box;
-                    // scaled_box.x = channel->display_roi.x + static_cast<int>(box.x * scale_x);
-                    // scaled_box.y = channel->display_roi.y + static_cast<int>(box.y * scale_y);
-                    // scaled_box.width = static_cast<int>(box.width * scale_x);
-                    // scaled_box.height = static_cast<int>(box.height * scale_y);
-
-                    cv::rectangle(frame, box, color_anchor, 2);
-                    std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
-                    cv::putText(g_canvas, label, cv::Point(box.x, box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
-                }
-            }
         
 
+            // Draw the latest frame to its ROI
+
+
+            // alarm 발생 시, 빨간 색, 아닐 시 초록 색
+
+        if (channel->alarm == 0){
+            color_anchor = cv::Scalar(0,255,0);
+            color_boundary = cv::Scalar(255,255,255);
+
+        } else if (channel->alarm == 1) {
+            color_anchor = cv::Scalar(0,0,255);
+            color_boundary = cv::Scalar(255,255,255);
+
+        } else if (channel->alarm == 2){
+            color_anchor = cv::Scalar(0,0,255);
+            color_boundary = cv::Scalar(0,0,255);
         }
+
+        // 0829 이현진 점유율 테스트
+        // if (!latest_frames[i].empty()){
+        //     cv::imshow("image", latest_frames[i]);
+        //     // std::cout << latest_frames[i].size << std::endl;
+        // }
+        
+        
+        // Draw the latest bounding boxes to its ROI, applying the class filter
+        // alarm 테두리 빨간 색 처리 코드   
+        cv::rectangle(frame, cv::Rect(0,0,width, height), color_boundary, 3);
+        
+        for (const auto& det : results) {
+            // FILTERING LOGIC: Check if the classID is in the allowed list
+            if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
+                cv::Rect box = det.box;
+                // IMPORTANT: Adjust resolution (e.g., 1920, 1080) for each camera if they differ
+                // float scale_x = (float)channel->display_roi.width / (std::stof(g_ini.at("window_width")) / std::stof(g_ini.at("window_col")));
+                // float scale_y = (float)channel->display_roi.height / (std::stof(g_ini.at("window_height")) / std::stof(g_ini.at("window_row")));
+
+                // cv::Rect scaled_box;
+                // scaled_box.x = channel->display_roi.x + static_cast<int>(box.x * scale_x);
+                // scaled_box.y = channel->display_roi.y + static_cast<int>(box.y * scale_y);
+                // scaled_box.width = static_cast<int>(box.width * scale_x);
+                // scaled_box.height = static_cast<int>(box.height * scale_y);
+
+                cv::rectangle(frame, box, color_anchor, 2);
+                std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
+                cv::putText(g_canvas, label, cv::Point(box.x, box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
+            }
+        }
+        
+
+        
         std::stringstream ss_output_path;
         std::string output_path = "../output";
         std::filesystem::path output_path_fs = "../output";
         std::filesystem::create_directories(output_path_fs);
-        ss_output_path << output_path << "/" << channel->CameraChannelID << "_" <<channel->channel_number << ".jpg";
+        ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << "_" <<channel->channel_number << ".jpg";
         cv::imwrite(ss_output_path.str(), frame);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -541,14 +558,36 @@ int main_before_0908(int argc, char* argv[]) { // channel과 기능 별로 모�
     return 0;
 }
 
+void signal_handler(int signum) {
+    std::cout << "종료 신호 수신... " << std::endl;
+    std::cout << "이미 실행된 thread를 종료..." << std::endl;
+    g_running = false;
+    // std::cerr<< "신호 " << signum << " 수신. semaphore 제거중 ..." << std::endl;
+    // sem_unlink(get_image_sem_name);
+    // exit(signum);
+}
+
 int main(int argc, char* argv[]) {
      // --- Initialization ---
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     std::string onnx_path = "./resource/yolov8n.onnx";
     std::string config_path = "./resource/alarm.conf";
     std::string ini_path = "./resource/app.ini";
 
     read_conf(config_path, g_alarms);
     read_ini(ini_path, g_ini);
+    g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 2);
+    if (g_sem_image == SEM_FAILED) {
+        std::cerr<<"sem_open failed (get_image)" << std::endl;
+        return 1;
+    }
+    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 1);
+    if (g_sem_inference == SEM_FAILED) {
+        std::cerr << "sem_open failed (inference)" << std::endl;
+        return 1;
+    }
 
     // --- Configuration ---
     std::vector<std::unique_ptr<CameraChannel>> channels;
@@ -575,6 +614,7 @@ int main(int argc, char* argv[]) {
 
 
     for (auto& channel : channels) {
+        // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path);
         channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
 
         // channel->producer_thread = std::thread(producer, channel.get());
@@ -597,6 +637,9 @@ int main(int argc, char* argv[]) {
     // painter_thread.join();
     // imageshow_thread.join();
 
-
+    sem_close(g_sem_image);
+    sem_unlink(get_image_sem_name);
+    sem_close(g_sem_inference);
+    sem_unlink(infer_sem_name);
     return 0;
 }
