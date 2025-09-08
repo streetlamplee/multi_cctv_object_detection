@@ -159,3 +159,4 @@ sysroot/
 sysroot/*
 .editorconfig
 lib/
+output/
