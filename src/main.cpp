@@ -208,7 +208,7 @@ void routine(CameraChannel* channel, std::string net_path){
         std::string output_path = "../output";
         std::filesystem::path output_path_fs = "../output";
         std::filesystem::create_directories(output_path_fs);
-        ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << "_" <<channel->channel_number << ".jpg";
+        ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".jpg";
         cv::imwrite(ss_output_path.str(), frame);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
