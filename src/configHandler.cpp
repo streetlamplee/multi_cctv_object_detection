@@ -9,7 +9,7 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
         std::cerr << "Error: Cannot Open Config File" << std::endl;
         return -1;
     }
-    Alarm* a = nullptr;
+    std::unique_ptr<Alarm> a = nullptr;
     std::string line;
     while (std::getline(conf, line)) {
         if (start_with(line, "//") || start_with(line, "#") || start_with(line, "/") || line.empty()) {
@@ -29,7 +29,7 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
             if (a != nullptr) {
                 alarms.push_back(*a);
             }
-            a = new Alarm();
+            a = std::make_unique<Alarm>();
             std::string desc = line;
             strip(desc);
             a->set_description(desc);
@@ -49,7 +49,7 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
         
     }
 
-    if (conf.eof()) {
+    if (a != nullptr) {
         alarms.push_back(*a);
     }
     return 1;

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4x3 이미지 갤러리</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            padding: 20px 0;
+        }
+
+        .gallery-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 20px;
+            max-width: 1200px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .gallery-item {
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .gallery-item img:hover {
+            transform: scale(1.05);
+        }
+
+        /* 4열을 유지하면서 이미지 크기 비율을 맞추기 위한 CSS */
+        @media (max-width: 768px) {
+            .gallery-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 텍스트 박스 스타일 */
+        .text-box-container {
+            max-width: 1200px;
+            width: 100%;
+            margin-top: 30px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .text-box-header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .counter {
+            background-color: #007bff;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+
+        .text-box {
+            height: 200px;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .text-line {
+            margin-bottom: 0px;
+            padding: 4px 8px;
+            background-color: white;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+            font-size: 0.7em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="gallery-container" id="galleryContainer">
+        <div class="gallery-item"><img src="./output/01.jpg" alt="이미지 1"></div>
+        <div class="gallery-item"><img src="./output/02.jpg" alt="이미지 2"></div>
+        <div class="gallery-item"><img src="./output/03.jpg" alt="이미지 3"></div>
+        <div class="gallery-item"><img src="./output/04.jpg" alt="이미지 4"></div>
+        <div class="gallery-item"><img src="./output/05.jpg" alt="이미지 5"></div>
+        <div class="gallery-item"><img src="./output/06.jpg" alt="이미지 6"></div>
+        <div class="gallery-item"><img src="./output/07.jpg" alt="이미지 7"></div>
+        <div class="gallery-item"><img src="./output/08.jpg" alt="이미지 8"></div>
+        <div class="gallery-item"><img src="./output/09.jpg" alt="이미지 9"></div>
+        <div class="gallery-item"><img src="./output/10.jpg" alt="이미지 10"></div>
+        <div class="gallery-item"><img src="./output/11.jpg" alt="이미지 11"></div>
+        <div class="gallery-item"><img src="./output/12.jpg" alt="이미지 12"></div>
+    </div>
+
+    <!-- 스크롤되는 텍스트 박스 -->
+    <div class="text-box-container">
+        <div class="text-box-header">
+            <span>실시간 로그</span>
+            <span class="counter" id="counter">카운터: 0</span>
+        </div>
+        <div class="text-box" id="textBox">
+            <div class="text-line">시스템이 시작되었습니다.</div>
+        </div>
+    </div>
+
+    <script>
+        let counter = 0;
+        const counterElement = document.getElementById('counter');
+        const textBox = document.getElementById('textBox');
+        const totalImages = 12;
+        const imageBaseName = "./output/";
+        const imageExtension = ".jpg";
+
+        // 1초마다 카운터 증가 및 텍스트 추가
+        setInterval(() => {
+            const timestamp = new Date().getTime();
+
+            for (let i = 1; i <= totalImages; i++) {
+                const fileName = imageBaseName + String(i).padStart(2,'0') + imageExtension;
+
+                const imgElement = document.querySelector(`img[src^="${fileName}"]`);
+                if (imgElement) {
+                    imgElement.src = fileName + '?t=' + timestamp;
+                }
+            }
+        }, 1000);
+        setInterval(() => {
+            // fetch API를 사용하여 서버의 로그 파일을 비동기적으로 가져옵니다.
+            fetch('./build/app.log', { cache: 'no-store' }) // 캐시를 사용하지 않도록 설정
+                .then(response => {
+                    // 응답이 성공적이지 않으면 (예: 파일이 없는 경우 404) 에러를 발생시킵니다.
+                    if (!response.ok) {
+                        throw new Error('로그 파일을 찾을 수 없습니다.');
+                    }
+                    // 응답을 텍스트로 변환하여 반환합니다.
+                    return response.text();
+                })
+                .then(text => {
+                    // 파일 내용을 성공적으로 가져온 후 실행됩니다.
+                    
+                    // 1. 기존의 textBox 내용을 모두 비웁니다.
+                    textBox.innerHTML = '';
+
+                    // 2. 텍스트를 줄바꿈 기준으로 나누어 배열로 만듭니다.
+                    let lines = text.split('\n');
+                    
+                    // 3. 너무 많은 라인이 쌓이지 않도록 제한 (최신 50줄만 유지)
+                    if (lines.length > 50) {
+                        lines = lines.slice(lines.length - 50);
+                    }
+
+                    // 4. 각 라인을 순회하며 textBox에 자식 요소(div)로 추가합니다.
+                    lines.forEach(line => {
+                        // 내용이 비어있는 줄은 추가하지 않습니다.
+                        if (line.trim() !== '') {
+                            const lineElement = document.createElement('div');
+                            lineElement.className = 'text-line'; // CSS 클래스 적용
+                            lineElement.textContent = line;
+                            textBox.appendChild(lineElement);
+                        }
+                    });
+
+                    // 5. 자동 스크롤 (최신 내용이 보이도록)
+                    textBox.scrollTop = textBox.scrollHeight;
+                })
+                .catch(error => {
+                    // 파일 가져오기 실패 시 콘솔에 에러를 출력합니다.
+                    console.error('로그 파일 로딩 오류:', error);
+                    // 사용자에게도 피드백을 줄 수 있습니다.
+                    // textBox.textContent = '로그를 불러오는 데 실패했습니다.';
+                });
+        }, 3000);
+    </script>
+
+</body>
+</html>
