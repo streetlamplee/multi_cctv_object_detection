@@ -15,13 +15,14 @@
 #include <sstream>
 #include <filesystem>
 #include <iomanip>      // std::setw, std::setfill
-
+#include "logHandler.h"
+#include "fileServer.h"
 
 
 // --- Global Variables ---
 cv::Mat g_canvas;
-std::mutex g_canvas_mutex;
-std::mutex g_alarm_mutex;
+// std::mutex g_canvas_mutex;
+// std::mutex g_alarm_mutex;
 bool g_running = true;
 std::vector<Alarm> g_alarms;
 std::unordered_map<std::string, std::string> g_ini;
@@ -30,6 +31,9 @@ sem_t *g_sem_image;
 sem_t *g_sem_inference;
 const char* get_image_sem_name = "/get_image";
 const char* infer_sem_name = "/inference";
+std::string log_path = "./resource/app.log";
+Log log_handler(log_path, 50);
+fileserver fs;
 
 // A structure to hold all resources for a single camera channel
 struct CameraChannel {
@@ -64,8 +68,24 @@ std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
 
 // --- Thread Functions ---
 
+void server_worker() {
+
+    fs.server_init(log_handler);
+    fs.server_start(log_handler);
+
+}
+
+// log_worker : n 초마다 log class의 정보를 텍스트 파일로 저장
+void log_worker() {
+    while(g_running) {
+        log_handler.save();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    }
+}
+
 // routine : 하나의 Camera Channel에 할당되는 routine 구현
 void routine(CameraChannel* channel, std::string net_path){
+    std::stringstream l;
     cv::Mat frame;
     std::string id = g_ini["id"];
     std::string password = g_ini["password"];
@@ -79,6 +99,7 @@ void routine(CameraChannel* channel, std::string net_path){
     cv::dnn::Net net = cv::dnn::readNet(net_path);
     if (net.empty()) {
         std::cerr << "Error: Cannot load ONNX model" << std::endl;
+        log_handler.push(Log::Level::ERROR, "Cannot load ONNX model", channel->CameraChannelID);
         return;
     }
 
@@ -143,9 +164,22 @@ void routine(CameraChannel* channel, std::string net_path){
             ++counter;
             
         }
-        std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
-        std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
+        if (risk_level > 0 ) {
+            l << "Condition : " << alarm_condition << ", risk level : " << risk_level;
+            log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
+            l.str("");
+            l.clear();
+            std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
 
+            l << "Warning condition approved, " << counter << "times";
+            log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
+            l.str("");
+            l.clear();
+            std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
+
+        } else {
+            // std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Debug] routine running... no Alarm" << std::endl;;
+        }
         // 추론 후, 그림 그리기
         cv::Scalar color_anchor;
         cv::Scalar color_boundary;
@@ -205,11 +239,14 @@ void routine(CameraChannel* channel, std::string net_path){
 
         
         std::stringstream ss_output_path;
-        std::string output_path = "../output";
-        std::filesystem::path output_path_fs = "../output";
+        std::string output_path = "./resource/output";
+        std::filesystem::path output_path_fs = "./resource/output";
         std::filesystem::create_directories(output_path_fs);
         ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".jpg";
         cv::imwrite(ss_output_path.str(), frame);
+
+        // 0910 디버그용.
+        // log_handler.push(Log::Level::ALARM, "Debug...", channel->CameraChannelID);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
@@ -274,7 +311,7 @@ void inference_alarm_worker(CameraChannel* channel, const std::string net_path) 
         for (Alarm alarm : local_alarms) {
             std::string condition = alarm.get_condition();
             {
-                std::lock_guard<std::mutex> lock(g_alarm_mutex);
+                // std::lock_guard<std::mutex> lock(g_alarm_mutex);
                 std::vector<int> detectedClass = channel->detected_class;
                 if (alarm.get_risk_level() < risk_level) { 
                     continue;
@@ -338,8 +375,8 @@ void canvas_painter(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 
         // 2. Lock the canvas and draw everything
         {
-            std::lock_guard<std::mutex> lock(g_canvas_mutex);
-            std::lock_guard<std::mutex> lock2(g_alarm_mutex);
+            // std::lock_guard<std::mutex> lock(g_canvas_mutex);
+            // std::lock_guard<std::mutex> lock2(g_alarm_mutex);
 
             for (size_t i = 0; i < channels.size(); ++i) {
                 // Draw the latest frame to its ROI
@@ -398,7 +435,7 @@ void canvas_painter(std::vector<std::unique_ptr<CameraChannel>>& channels) {
             }
         }
 
-
+        
 
         //0903 fps 테스트용
 
@@ -559,8 +596,11 @@ int main_before_0908(int argc, char* argv[]) { // channel과 기능 별로 모�
 }
 
 void signal_handler(int signum) {
-    std::cout << "종료 신호 수신... " << std::endl;
-    std::cout << "이미 실행된 thread를 종료..." << std::endl;
+    std::cout << "[Main] 종료 신호 수신... " << std::endl;
+    std::cout << "[Main] 이미 실행된 thread의 종료까지 대기..." << std::endl;
+    log_handler.push(Log::Level::INFO, "종료 신호 수신...");
+    log_handler.push(Log::Level::INFO, "이미 실행된 thread의 종료까지 대기...");
+    fs.server_stop(log_handler);
     g_running = false;
     // std::cerr<< "신호 " << signum << " 수신. semaphore 제거중 ..." << std::endl;
     // sem_unlink(get_image_sem_name);
@@ -578,16 +618,26 @@ int main(int argc, char* argv[]) {
 
     read_conf(config_path, g_alarms);
     read_ini(ini_path, g_ini);
+
+    log_handler.load();
+
+
+
+
+    sem_unlink(get_image_sem_name);
     g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 2);
     if (g_sem_image == SEM_FAILED) {
         std::cerr<<"sem_open failed (get_image)" << std::endl;
         return 1;
     }
+    sem_unlink(infer_sem_name);
     g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 1);
     if (g_sem_inference == SEM_FAILED) {
         std::cerr << "sem_open failed (inference)" << std::endl;
         return 1;
     }
+
+    
 
     // --- Configuration ---
     std::vector<std::unique_ptr<CameraChannel>> channels;
@@ -612,7 +662,7 @@ int main(int argc, char* argv[]) {
 
     // --- Start Threads ---
 
-
+    log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행");
     for (auto& channel : channels) {
         // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path);
         channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
@@ -625,21 +675,38 @@ int main(int argc, char* argv[]) {
     }
     // std::thread painter_thread(canvas_painter, std::ref(channels));
     // std::thread imageshow_thread(image_show_worker);
+    std::thread log_thread(log_worker);
+
+    // 0910 httplib 대신 nginx 사용으로 변경
+    // std::thread server_thread(server_worker);
 
     // --- Wait for Threads to Finish ---
     for (auto& channel : channels) {
         channel->routine_thread.join();
-        // channel->producer_thread.join();
-        // channel->inference_alarm_thread.join();
-        // channel->alarm_thread.join();
+    //     // channel->producer_thread.join();
+    //     // channel->inference_alarm_thread.join();
+    //     // channel->alarm_thread.join();
 
     }
     // painter_thread.join();
     // imageshow_thread.join();
+    log_thread.join();
 
+    // 0910 httplib 대신 nginx 사용으로 변경
+    // server_thread.join();
+
+
+    
+    
+
+    
+    std::cout << "[Main] Server thread 종료 완료. semaphore unlink 시도..." << std::endl;
+    log_handler.push(Log::Level::INFO, "모든 thread 종료 완료. semaphore unlink 시작");
     sem_close(g_sem_image);
     sem_unlink(get_image_sem_name);
     sem_close(g_sem_inference);
     sem_unlink(infer_sem_name);
+    std::cout << "[Main] semaphore unlink 완료. 프로그램 종료" << std::endl;
+    log_handler.push(Log::Level::INFO, "semaphore unlink 종료. 프로그램 종료.");
     return 0;
 }
