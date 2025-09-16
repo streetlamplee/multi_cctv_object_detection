@@ -28,7 +28,7 @@ int getFrame_api(std::string user, std::string password, std::string ip, int por
         frame = cv::imdecode(imageData, cv::IMREAD_COLOR);
         cv::resize(frame, frame, cv::Size(width, height));
         if (frame.empty()) {
-            frame = cv::Mat::zeros(height, width, CV_8SC3);
+            frame = cv::Mat::zeros(height, width, CV_8UC3);
         }
         cli.stop();
         return 1;
@@ -36,7 +36,7 @@ int getFrame_api(std::string user, std::string password, std::string ip, int por
     } else {
         auto err = res.error();
         std::cerr << "Error: " << err << std::endl;
-        frame = cv::Mat::zeros(height, width, CV_8SC3);
+        frame = cv::Mat::zeros(height, width, CV_8UC3);
         cli.stop();
         return 0;
     }

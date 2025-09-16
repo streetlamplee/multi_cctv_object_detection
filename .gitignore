@@ -158,5 +158,4 @@ test/*
 sysroot/
 sysroot/*
 .editorconfig
-lib/
 output/

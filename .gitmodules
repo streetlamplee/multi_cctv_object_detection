@@ -1,0 +1,9 @@
+[submodule "lib/onnxruntime"]
+	path = lib/onnxruntime
+	url = https://github.com/microsoft/onnxruntime.git
+[submodule "lib/opencv"]
+	path = lib/opencv
+	url = https://github.com/opencv/opencv.git
+[submodule "lib/cpp-httplib"]
+	path = lib/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib.git
