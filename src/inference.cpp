@@ -14,23 +14,28 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
         "hair drier", "toothbrush"
     };
     // image padding
-    cv::Mat input(640,640, CV_8UC3, cv::Scalar(0,0,0));
+    int s = 224;
+    cv::Mat input(s,s, CV_8UC3, cv::Scalar(0,0,0));
     cv::Mat resized_image;
-    float r_w = 640 / (float)image.cols;
-    float r_h = 640 / (float)image.rows;
+    float r_w = s / (float)image.cols;
+    float r_h = s / (float)image.rows;
     float r = std::min(r_w, r_h);
     int new_width = (int)(image.cols * r);
     int new_height = (int)(image.rows * r);
     cv::resize(image, resized_image, cv::Size(new_width, new_height), 0, 0, cv::INTER_AREA);
     
-    int top_pad = (640 - new_height) / 2;
-    int left_pad = (640 - new_width) / 2;
+    int top_pad = (s - new_height) / 2;
+    int left_pad = (s - new_width) / 2;
 
     resized_image.copyTo(input(cv::Rect(left_pad, top_pad, new_width, new_height)));
 
+	// 0917 not letterboxing the input image, just resize
+	//cv::Mat input;
+	//cv::resize(image, input, cv::Size(s, s), 0, 0, cv::INTER_AREA);
+
     //  이미지 전처리
     cv::Mat blob;
-    cv::Size input_size(640, 640);
+    cv::Size input_size(s, s);
     cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
     net.setInput(blob);
 
@@ -41,7 +46,7 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
 
     //  결과 처리
     float confidence_threshold = 0.5f;
-    float nms_threshold = 0.45f;
+    float nms_threshold = 0.3f;
 
     std::vector<int> class_ids;
     std::vector<float> confidences;
@@ -79,8 +84,12 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
 
             int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
             int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
+            // int left = static_cast<int>((x - 0.5 * w));
+            // int top = static_cast<int>((y - 0.5 * h));
             int width = static_cast<int>(w / r);
             int height = static_cast<int>(h / r);
+            // int width = static_cast<int>(w);
+            // int height = static_cast<int>(h);
 
             boxes.push_back(cv::Rect(left, top, width, height));
         }

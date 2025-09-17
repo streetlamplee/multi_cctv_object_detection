@@ -102,15 +102,28 @@ void routine(CameraChannel* channel, std::string net_path){
         log_handler.push(Log::Level::ERROR, "Cannot load ONNX model", channel->CameraChannelID);
         return;
     }
-
+    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+	
+	// 0911 bottleneck test
+	bool test = true;
+	if (channel->CameraChannelID == 1) {
+		test = true;
+	}
     while (g_running) {
+		auto start = std::chrono::high_resolution_clock::now();
         // NVR 접속 후, channel에 맞게 데이터 가져오기
         // std::cout << "[Thread " << channel->CameraChannelID << "] semaphore 할당 준비" << std::endl;
         sem_wait(g_sem_image);
         
 
         getFrame_api(id, password, ip, port, channel->channel_number, width, height, frame);
-
+		auto end = std::chrono::high_resolution_clock::now();
+		//~ if (test) {
+			//~ std::chrono::duration<double> diff = end-start;
+			//~ std::cout << "[Thread " << channel->CameraChannelID << "] image grab time: " << diff.count() << " s" << std::endl;
+		//~ }
+		start = std::chrono::high_resolution_clock::now();
         // std::cout << "[Thread " << channel->CameraChannelID << "] semaphore 할당 해제" << std::endl;
         sem_post(g_sem_image);
         
@@ -132,6 +145,14 @@ void routine(CameraChannel* channel, std::string net_path){
         cv::cvtColor(frame, frame_rgb, cv::COLOR_BGR2RGB);
         auto results = inference(net, frame_rgb);
         sem_post(g_sem_inference);
+        
+        
+        end = std::chrono::high_resolution_clock::now();
+		if (test) {
+			std::chrono::duration<double> diff = end-start;
+			std::cout << "[Thread " << channel->CameraChannelID << "] inference time: " << diff.count() << " s" << std::endl;
+		}
+		//~ start = std::chrono::high_resolution_clock::now();
         
         // channel->results_queue.push(results);
         for (auto& det: results) {
@@ -180,6 +201,14 @@ void routine(CameraChannel* channel, std::string net_path){
         } else {
             // std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Debug] routine running... no Alarm" << std::endl;;
         }
+        
+        //~ end = std::chrono::high_resolution_clock::now();
+		//~ if (test) {
+			//~ std::chrono::duration<double> diff = end-start;
+			//~ std::cout << "[Thread " << channel->CameraChannelID << "] alarm detect time: " << diff.count() << " s" << std::endl;
+		//~ }
+		//~ start = std::chrono::high_resolution_clock::now();
+        
         // 추론 후, 그림 그리기
         cv::Scalar color_anchor;
         cv::Scalar color_boundary;
@@ -236,7 +265,12 @@ void routine(CameraChannel* channel, std::string net_path){
             }
         }
         
-
+		//~ end = std::chrono::high_resolution_clock::now();
+		//~ if (test) {
+			//~ std::chrono::duration<double> diff = end-start;
+			//~ std::cout << "[Thread " << channel->CameraChannelID << "] image drawing time: " << diff.count() << " s" << std::endl;
+		//~ }
+		//~ start = std::chrono::high_resolution_clock::now();
         
         std::stringstream ss_output_path;
         std::string output_path = "./resource/output";
@@ -244,11 +278,18 @@ void routine(CameraChannel* channel, std::string net_path){
         std::filesystem::create_directories(output_path_fs);
         ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".jpg";
         cv::imwrite(ss_output_path.str(), frame);
+        
+        //~ end = std::chrono::high_resolution_clock::now();
+		//~ if (test) {
+			//~ std::chrono::duration<double> diff = end-start;
+			//~ std::cout << "[Thread " << channel->CameraChannelID << "] image saving time: " << diff.count() << " s" << std::endl;
+		//~ }
+		//~ start = std::chrono::high_resolution_clock::now();
 
         // 0910 디버그용.
         // log_handler.push(Log::Level::ALARM, "Debug...", channel->CameraChannelID);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 
@@ -612,7 +653,7 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    std::string onnx_path = "./resource/yolov8n.onnx";
+    std::string onnx_path = "./resource/yolov8n.quant.onnx";
     std::string config_path = "./resource/alarm.conf";
     std::string ini_path = "./resource/app.ini";
 
@@ -625,13 +666,13 @@ int main(int argc, char* argv[]) {
 
 
     sem_unlink(get_image_sem_name);
-    g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 2);
+    g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 3);
     if (g_sem_image == SEM_FAILED) {
         std::cerr<<"sem_open failed (get_image)" << std::endl;
         return 1;
     }
     sem_unlink(infer_sem_name);
-    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 1);
+    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 9);
     if (g_sem_inference == SEM_FAILED) {
         std::cerr << "sem_open failed (inference)" << std::endl;
         return 1;
@@ -663,14 +704,12 @@ int main(int argc, char* argv[]) {
     // --- Start Threads ---
 
     log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행");
+    //~ channels[0]->routine_thread = std::thread(routine, channels[0].get(), onnx_path);
     for (auto& channel : channels) {
+		channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
         // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path);
-        channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
-
         // channel->producer_thread = std::thread(producer, channel.get());
-
         // channel->inference_alarm_thread = std::thread(inference_alarm_worker, channel.get(), onnx_path);
-
         // channel->alarm_thread = std::thread(alarm_worker, channel.get());
     }
     // std::thread painter_thread(canvas_painter, std::ref(channels));
@@ -681,6 +720,7 @@ int main(int argc, char* argv[]) {
     // std::thread server_thread(server_worker);
 
     // --- Wait for Threads to Finish ---
+    //~ channels[0]->routine_thread.join();
     for (auto& channel : channels) {
         channel->routine_thread.join();
     //     // channel->producer_thread.join();
