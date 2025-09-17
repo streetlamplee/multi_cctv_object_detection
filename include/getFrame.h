@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 #include <opencv2/opencv.hpp>
-#include "cpp-httplib/httplib.h"
+#include "httplib.h"
 
 //brief: from rstp url, return videoCapture class
 int connectRTSP(std::string url, cv::VideoCapture& cap);
