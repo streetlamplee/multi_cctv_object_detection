@@ -126,6 +126,24 @@
         </div>
     </div>
 
+    <div id="myModal" style="
+        display: none; 
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 480px;
+        height: 270px;
+        border: 2px solid black; 
+        background-color: #f0f0f0; 
+        padding: 20px;
+        box-sizing: border-box;
+    ">
+    <h2>알림 메시지</h2>
+    <p>설정한 조건이 달성되었습니다!</p>
+    <button id="closeBtn">닫기</button>
+    </div>
+
     <script>
         let counter = 0;
         const counterElement = document.getElementById('counter');
@@ -133,6 +151,29 @@
         const totalImages = 12;
         const imageBaseName = "./output/";
         const imageExtension = ".jpg";
+        let last_alarm = "";
+
+        const modal = document.getElementById("myModal");
+        const closeBtn = document.getElementById("closeBtn");
+
+        function showModal(title, message) {
+            // 1. myModal div 안에서 h2와 p 요소를 찾습니다.
+            const modalTitle = modal.querySelector("h2");
+            const modalMessage = modal.querySelector("p");
+
+            // 2. 함수의 인자로 받은 title과 message로 내용을 변경합니다.
+            modalTitle.innerText = title;
+            modalMessage.innerText = message;
+
+            // 3. 모달을 화면에 보여줍니다.
+            modal.style.display = "block";
+        }
+
+        function hideModal() {
+            modal.style.display = "none";
+        }
+
+        closeBtn.onclick = hideModal;
 
         // 1초마다 카운터 증가 및 텍스트 추가
         setInterval(() => {
@@ -148,8 +189,9 @@
             }
         }, 1000);
         setInterval(() => {
+            let this_interval_last_alarm = "";
             // fetch API를 사용하여 서버의 로그 파일을 비동기적으로 가져옵니다.
-            fetch('./build/app.log', { cache: 'no-store' }) // 캐시를 사용하지 않도록 설정
+            fetch('./app.log', { cache: 'no-store' }) // 캐시를 사용하지 않도록 설정
                 .then(response => {
                     // 응답이 성공적이지 않으면 (예: 파일이 없는 경우 404) 에러를 발생시킵니다.
                     if (!response.ok) {
@@ -181,10 +223,18 @@
                             lineElement.textContent = line;
                             textBox.appendChild(lineElement);
                         }
+                        if (line.includes("ALARM")) {
+                            this_interval_last_alarm = line;
+                        }
                     });
 
                     // 5. 자동 스크롤 (최신 내용이 보이도록)
                     textBox.scrollTop = textBox.scrollHeight;
+
+                    if (this_interval_last_alarm != last_alarm && counter == 1) {
+                        showModal("Alarm", this_interval_last_alarm);
+                        last_alarm = this_interval_last_alarm;
+                    }
                 })
                 .catch(error => {
                     // 파일 가져오기 실패 시 콘솔에 에러를 출력합니다.
@@ -192,6 +242,7 @@
                     // 사용자에게도 피드백을 줄 수 있습니다.
                     // textBox.textContent = '로그를 불러오는 데 실패했습니다.';
                 });
+            counter = 1;
         }, 3000);
     </script>
 
