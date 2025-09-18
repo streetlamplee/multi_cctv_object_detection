@@ -203,7 +203,7 @@ void routine(CameraChannel* channel, std::string net_path){
         } else if (risk_level == 0 and channel->alarm != 0) {
             alarm_timeout++;
             // std::cout << "alarm_timeout : " << alarm_timeout << std::endl;
-            if (alarm_timeout > 100) {
+            if (alarm_timeout > 50) {
                 channel->alarm = 0;
             }
         } else { }
