@@ -41,6 +41,12 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
             a->set_risk_level(std::stoi(tokens[1]));
         }
 
+        else if (start_with(line, "target_channel")){
+            std::vector<std::string> tokens;
+            split(line, tokens, ':');
+            a->set_target_channel(std::stoi(tokens[1]));
+        }
+
         else {
             make_space(line);
             postfix(line);
