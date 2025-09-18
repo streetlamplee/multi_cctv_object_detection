@@ -96,6 +96,75 @@
             border-left: 3px solid #007bff;
             font-size: 0.7em;
         }
+
+        #notification-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column; /* 새 알림이 기존 알림 위로 쌓이게 합니다. */
+            /* align-items: flex-end; */
+            z-index: 1000;
+            max-height: 90vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 15px;
+        }
+
+        .toast-notification {
+            background-color: #333;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            width: 320px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.4s ease-in-out;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 알림이 나타날 때의 애니메이션 효과 */
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-notification .close-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 20px;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+
+        .toast-notification .close-btn:hover {
+            color: white;
+        }
+
+        #close-all-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: #d9534f; /* 눈에 띄는 붉은 계열 색상 */
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none; /* 숨겨져 있을 때 클릭 방지 */
+        }
+
+        #close-all-btn.show {
+            opacity: 1;
+            pointer-events: auto; /* 보일 때 클릭 활성화 */
+        }
     </style>
 </head>
 <body>
@@ -126,6 +195,8 @@
         </div>
     </div>
 
+    <div id="notification-container"></div>
+
     <script>
         let counter = 0;
         const counterElement = document.getElementById('counter');
@@ -133,6 +204,104 @@
         const totalImages = 12;
         const imageBaseName = "./output/";
         const imageExtension = ".jpg";
+        let last_alarm = "";
+
+        // const modal = document.getElementById("myModal");
+        // const closeBtn = document.getElementById("closeBtn");
+
+        // function showModal(title, message) {
+        //     // 1. myModal div 안에서 h2와 p 요소를 찾습니다.
+        //     const modalTitle = modal.querySelector("h2");
+        //     const modalMessage = modal.querySelector("p");
+
+        //     // 2. 함수의 인자로 받은 title과 message로 내용을 변경합니다.
+        //     modalTitle.innerText = title;
+        //     modalMessage.innerText = message;
+
+        //     // 3. 모달을 화면에 보여줍니다.
+        //     modal.style.display = "block";
+        // }
+
+        // function hideModal() {
+        //     modal.style.display = "none";
+        // }
+
+        // closeBtn.onclick = hideModal;
+
+        /**
+         * 새로운 토스트 알림을 생성하는 함수
+         * @param {string} message - 알림에 표시할 메시지
+         */
+        function updateCloseAllButtonVisibility() {
+            const container = document.getElementById('notification-container');
+            const notifications = container.querySelectorAll('.toast-notification');
+            let closeAllBtn = document.getElementById('close-all-btn');
+
+            // 알림이 2개 이상일 때
+            if (notifications.length >= 2) {
+                if (!closeAllBtn) { // 버튼이 없다면 새로 생성
+                    closeAllBtn = document.createElement('button');
+                    closeAllBtn.id = 'close-all-btn';
+                    closeAllBtn.innerText = '알림 모두 닫기';
+                    
+                    closeAllBtn.onclick = () => {
+                        container.querySelectorAll('.toast-notification').forEach(n => {
+                            n.classList.remove('show');
+                            n.addEventListener('transitionend', () => n.remove());
+                        });
+                        closeAllBtn.classList.remove('show');
+                        closeAllBtn.addEventListener('transitionend', () => closeAllBtn.remove());
+                    };
+                }
+                
+                // ★★★ 핵심 수정사항 ★★★
+                // 버튼을 항상 컨테이너의 맨 마지막으로 추가(이동)시킵니다.
+                // 버튼이 이미 존재할 경우, 이 코드는 버튼을 맨 아래로 '이동'시키는 역할을 합니다.
+                container.appendChild(closeAllBtn);
+                
+                // 애니메이션을 위해 show 클래스 추가
+                setTimeout(() => closeAllBtn.classList.add('show'), 10);
+
+            // 알림이 2개 미만일 때
+            } else if (closeAllBtn) {
+                // 버튼이 존재하면 숨기고 제거
+                closeAllBtn.classList.remove('show');
+                closeAllBtn.addEventListener('transitionend', () => closeAllBtn.remove());
+            }
+        }
+
+        function createNotification(message) {
+            const container = document.getElementById('notification-container');
+
+            const notification = document.createElement('div');
+            notification.className = 'toast-notification';
+            
+            notification.innerHTML = `
+                <span>${message}</span>
+                <button class="close-btn">&times;</button>
+            `;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+
+            // 닫기 버튼 클릭 시 알림 삭제
+            notification.querySelector('.close-btn').onclick = () => {
+                notification.classList.remove('show');
+                notification.addEventListener('transitionend', () => {
+                    notification.remove();
+                    // 알림이 닫힌 후 버튼 상태 업데이트
+                    updateCloseAllButtonVisibility();
+                });
+            };
+
+            container.scrollTop = container.scrollHeight;
+            
+            // 새 알림이 추가되었으므로 버튼 상태 업데이트
+            updateCloseAllButtonVisibility();
+        }
 
         // 1초마다 카운터 증가 및 텍스트 추가
         setInterval(() => {
@@ -146,10 +315,12 @@
                     imgElement.src = fileName + '?t=' + timestamp;
                 }
             }
-        }, 1000);
+        }, 200);
+        
         setInterval(() => {
+            let this_interval_last_alarm = "";
             // fetch API를 사용하여 서버의 로그 파일을 비동기적으로 가져옵니다.
-            fetch('./build/app.log', { cache: 'no-store' }) // 캐시를 사용하지 않도록 설정
+            fetch('./app.log', { cache: 'no-store' }) // 캐시를 사용하지 않도록 설정
                 .then(response => {
                     // 응답이 성공적이지 않으면 (예: 파일이 없는 경우 404) 에러를 발생시킵니다.
                     if (!response.ok) {
@@ -181,10 +352,33 @@
                             lineElement.textContent = line;
                             textBox.appendChild(lineElement);
                         }
+                        if (line.includes("ALARM")) {
+                            this_interval_last_alarm = line;
+                        }
                     });
 
                     // 5. 자동 스크롤 (최신 내용이 보이도록)
                     textBox.scrollTop = textBox.scrollHeight;
+
+                    const allAlarmsInLog = lines.filter(line => line.includes("ALARM"));
+
+                    if (allAlarmsInLog.length > 0) {
+                        // 마지막으로 보았던 알람이 현재 로그에 어디 있는지 찾습니다.
+                        const lastAlarmIndex = last_alarm ? allAlarmsInLog.lastIndexOf(last_alarm) : -1;
+
+                        // 마지막으로 본 알람 '이후'의 새로운 알람들을 찾습니다.
+                        const newAlarms = allAlarmsInLog.slice(lastAlarmIndex + 1);
+                        
+                        // 각각의 새로운 알람에 대해 알림을 생성합니다.
+                        newAlarms.forEach(alarm => {
+                            createNotification(alarm);
+                        });
+                        
+                        // 마지막 알람을 새롭게 업데이트합니다.
+                        if (newAlarms.length > 0) {
+                            last_alarm = newAlarms[newAlarms.length - 1];
+                        }
+                    }
                 })
                 .catch(error => {
                     // 파일 가져오기 실패 시 콘솔에 에러를 출력합니다.
@@ -192,6 +386,7 @@
                     // 사용자에게도 피드백을 줄 수 있습니다.
                     // textBox.textContent = '로그를 불러오는 데 실패했습니다.';
                 });
+            counter = 1;
         }, 3000);
     </script>
 

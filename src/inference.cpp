@@ -3,15 +3,17 @@
 std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     // 클래스 이름 정의 (YOLOv8의 80개 COCO 클래스)
     std::vector<std::string> class_names = {
-        "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
-        "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
-        "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee",
-        "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
-        "tennis racket", "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-        "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
-        "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
-        "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-        "hair drier", "toothbrush"
+        "standing",
+        "lying down on bed",
+        "sitting on bed",
+        "fallen down",
+        "wheel chair",
+        "unknown status",
+        "sitting on chair",
+        "sitting on the floor",
+        "food tray",
+        "perch on bed", 
+        "staff"
     };
     // image padding
     int s = 224;
@@ -45,8 +47,8 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     net.forward(outputs, output_names);
 
     //  결과 처리
-    float confidence_threshold = 0.5f;
-    float nms_threshold = 0.3f;
+    float confidence_threshold = 0.7f;
+    float nms_threshold = 0.1f;
 
     std::vector<int> class_ids;
     std::vector<float> confidences;

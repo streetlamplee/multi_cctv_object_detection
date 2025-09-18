@@ -193,7 +193,7 @@ void routine(CameraChannel* channel, std::string net_path){
             std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
 
             l << "Warning condition approved, " << counter << "times";
-            log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
+            // log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
             l.str("");
             l.clear();
             std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
@@ -247,22 +247,22 @@ void routine(CameraChannel* channel, std::string net_path){
         
         for (const auto& det : results) {
             // FILTERING LOGIC: Check if the classID is in the allowed list
-            if (std::find(g_allowed_class_ids.begin(), g_allowed_class_ids.end(), det.classID) != g_allowed_class_ids.end()) {
-                cv::Rect box = det.box;
-                // IMPORTANT: Adjust resolution (e.g., 1920, 1080) for each camera if they differ
-                // float scale_x = (float)channel->display_roi.width / (std::stof(g_ini.at("window_width")) / std::stof(g_ini.at("window_col")));
-                // float scale_y = (float)channel->display_roi.height / (std::stof(g_ini.at("window_height")) / std::stof(g_ini.at("window_row")));
+            
+            cv::Rect box = det.box;
+            // IMPORTANT: Adjust resolution (e.g., 1920, 1080) for each camera if they differ
+            // float scale_x = (float)channel->display_roi.width / (std::stof(g_ini.at("window_width")) / std::stof(g_ini.at("window_col")));
+            // float scale_y = (float)channel->display_roi.height / (std::stof(g_ini.at("window_height")) / std::stof(g_ini.at("window_row")));
 
-                // cv::Rect scaled_box;
-                // scaled_box.x = channel->display_roi.x + static_cast<int>(box.x * scale_x);
-                // scaled_box.y = channel->display_roi.y + static_cast<int>(box.y * scale_y);
-                // scaled_box.width = static_cast<int>(box.width * scale_x);
-                // scaled_box.height = static_cast<int>(box.height * scale_y);
+            // cv::Rect scaled_box;
+            // scaled_box.x = channel->display_roi.x + static_cast<int>(box.x * scale_x);
+            // scaled_box.y = channel->display_roi.y + static_cast<int>(box.y * scale_y);
+            // scaled_box.width = static_cast<int>(box.width * scale_x);
+            // scaled_box.height = static_cast<int>(box.height * scale_y);
 
-                cv::rectangle(frame, box, color_anchor, 2);
-                std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
-                cv::putText(g_canvas, label, cv::Point(box.x, box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
-            }
+            cv::rectangle(frame, box, color_anchor, 2);
+            std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
+            cv::putText(frame, label, cv::Point(box.x, box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
+            
         }
         
 		//~ end = std::chrono::high_resolution_clock::now();
