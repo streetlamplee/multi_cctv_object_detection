@@ -1,13 +1,16 @@
 #include "alarm.h"
 
 Alarm::Alarm() {}
-Alarm::Alarm(std::string des, std::string cond, int r_lv) {
+Alarm::Alarm(int target_channel, std::string des, std::string cond, int r_lv) {
+    this->target_channel = target_channel;
     this->description = des;
     this->condition = cond;
     this->risk_level = r_lv;
 }
 Alarm::~Alarm() {}
-
+void Alarm::set_target_channel(int target_channel){
+    this->target_channel = target_channel;
+}
 void Alarm::set_description(std::string des){
     this->description = des;
 }
@@ -17,7 +20,9 @@ void Alarm::set_condition(std::string cond){
 void Alarm::set_risk_level(int r_lv){
     this->risk_level = r_lv;
 }
-
+int Alarm::get_target_channel(){
+    return this->target_channel;
+}
 std::string Alarm::get_description(){
     return this->description;
 }

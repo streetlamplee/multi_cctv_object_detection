@@ -77,8 +77,15 @@ void server_worker() {
 
 // log_worker : n 초마다 log class의 정보를 텍스트 파일로 저장
 void log_worker() {
+    bool heartbit = true;
     while(g_running) {
         log_handler.save();
+        if (heartbit) {
+            std::cout << ">>>" << std::endl;
+        } else {
+            std::cout << ">>" << std::endl;
+        }
+        heartbit = !heartbit;
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
     }
 }
@@ -95,7 +102,7 @@ void routine(CameraChannel* channel, std::string net_path){
     int height = std::stoi(g_ini.at("window_height")) / std::stoi(g_ini.at("window_row"));
     std::vector<Alarm> local_alarms = g_alarms;
     std::string alarm_condition = "";
-    int counter = 0;
+    int alarm_timeout = 0;
     cv::dnn::Net net = cv::dnn::readNet(net_path);
     if (net.empty()) {
         std::cerr << "Error: Cannot load ONNX model" << std::endl;
@@ -106,9 +113,9 @@ void routine(CameraChannel* channel, std::string net_path){
     net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 	
 	// 0911 bottleneck test
-	bool test = true;
+	bool test = false;
 	if (channel->CameraChannelID == 1) {
-		test = true;
+		test = false;
 	}
     while (g_running) {
 		auto start = std::chrono::high_resolution_clock::now();
@@ -130,7 +137,6 @@ void routine(CameraChannel* channel, std::string net_path){
         
         // 추론 process
         int risk_level = 0;
-        bool isAlarm = false;
 
         channel->detected_class.clear();
         if (frame.empty() || !g_running) {
@@ -167,40 +173,40 @@ void routine(CameraChannel* channel, std::string net_path){
 
         for (Alarm alarm : local_alarms) {
             std::string condition = alarm.get_condition();
+            int target_channel = alarm.get_target_channel();
             
-            
-            if (alarm.get_risk_level() < risk_level) { 
+            if (target_channel != channel->CameraChannelID) {
+                continue;
+            }
+            if (alarm.get_risk_level() <= risk_level) { 
                 continue;
             }
             if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
-                isAlarm = true;
                 risk_level = alarm.get_risk_level();
                 alarm_condition = condition;
-
             }
+        }
+        // std::cout << "risk level : " << risk_level << std::endl;
+        if (risk_level > channel->alarm) {
             channel->alarm = risk_level;
-            
-        }
-        if (isAlarm) {
-            ++counter;
-            
-        }
-        if (risk_level > 0 ) {
             l << "Condition : " << alarm_condition << ", risk level : " << risk_level;
             log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
             l.str("");
             l.clear();
             std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
 
-            l << "Warning condition approved, " << counter << "times";
+            l << "Warning condition approved,";
             // log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
             l.str("");
             l.clear();
-            std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
-
-        } else {
-            // std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Debug] routine running... no Alarm" << std::endl;;
-        }
+            std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved," << std::endl;
+        } else if (risk_level == 0 and channel->alarm != 0) {
+            alarm_timeout++;
+            // std::cout << "alarm_timeout : " << alarm_timeout << std::endl;
+            if (alarm_timeout > 100) {
+                channel->alarm = 0;
+            }
+        } else { }
         
         //~ end = std::chrono::high_resolution_clock::now();
 		//~ if (test) {
@@ -492,6 +498,8 @@ void canvas_painter(std::vector<std::unique_ptr<CameraChannel>>& channels) {
         // 0829 이현진  CPU 점유율 test
         // std::cout << "col : " << g_canvas.cols << ", row : " << g_canvas.rows << std::endl;
         // std::cout << "some value: " << g_canvas.dims << std::endl;
+        std::cout << std::endl;
+
     }
     
 }
