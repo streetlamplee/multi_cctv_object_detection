@@ -193,7 +193,7 @@ void routine(CameraChannel* channel, std::string net_path){
             std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
 
             l << "Warning condition approved, " << counter << "times";
-            log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
+            // log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
             l.str("");
             l.clear();
             std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved, " << counter << "times" << std::endl;
