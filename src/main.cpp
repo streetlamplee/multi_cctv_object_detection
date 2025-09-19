@@ -658,7 +658,7 @@ void signal_handler(int signum) {
     std::cout << "[Main] 이미 실행된 thread의 종료까지 대기..." << std::endl;
     log_handler.push(Log::Level::INFO, "종료 신호 수신...");
     log_handler.push(Log::Level::INFO, "이미 실행된 thread의 종료까지 대기...");
-    fs.server_stop(log_handler);
+    // fs.server_stop(log_handler);
     g_running = false;
     // std::cerr<< "신호 " << signum << " 수신. semaphore 제거중 ..." << std::endl;
     // sem_unlink(get_image_sem_name);
