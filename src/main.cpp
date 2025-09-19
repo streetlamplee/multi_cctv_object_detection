@@ -34,11 +34,11 @@ const char* get_image_sem_name = "/get_image";
 const char* infer_sem_name = "/inference";
 std::string log_path = "./resource/app.log";
 Log log_handler(log_path, 50);
-fileserver fs;
+// fileserver fs;       // nginx 사용으로 인해 사용하지 않음
 
 // Developer Option : 데이터 저장 설정을 ini로 빼둠;
-const unsigned int total_data_per_channel = 10;
-const unsigned int duration_between_data = 10;
+const unsigned int total_data_per_channel = 9999;
+const unsigned int duration_between_data = 300;
 
 // A structure to hold all resources for a single camera channel
 struct CameraChannel {
@@ -73,12 +73,11 @@ std::vector<int> g_allowed_class_ids = {0, 64, 66, 73};
 
 // --- Thread Functions ---
 
-void server_worker() {
-
-    fs.server_init(log_handler);
-    fs.server_start(log_handler);
-
-}
+// nginx 사용으로 변경
+// void server_worker() {
+//     fs.server_init(log_handler);
+//     fs.server_start(log_handler);
+// }
 
 // log_worker : n 초마다 log class의 정보를 텍스트 파일로 저장
 void log_worker() {
@@ -164,10 +163,10 @@ void routine(CameraChannel* channel, std::string net_path){
         auto results = inference(net, frame_rgb);
         sem_post(g_sem_inference);
         
-		if (test) {
-			std::chrono::duration<double> diff = end-start;
-			std::cout << "[Thread " << channel->CameraChannelID << "] inference time: " << diff.count() << " s" << std::endl;
-		}
+		// if (test) {
+		// 	std::chrono::duration<double> diff = end-start;
+		// 	std::cout << "[Thread " << channel->CameraChannelID << "] inference time: " << diff.count() << " s" << std::endl;
+		// }
 		//~ start = std::chrono::high_resolution_clock::now();
         
         // channel->results_queue.push(results);
@@ -306,7 +305,7 @@ void routine(CameraChannel* channel, std::string net_path){
         std::filesystem::path output_path_fs = "./resource/output";
         std::filesystem::create_directories(output_path_fs);
         ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".jpg";
-        cv::imwrite(ss_output_path.str(), frame_save);
+        cv::imwrite(ss_output_path.str(), sub_frame);
         
         //~ end = std::chrono::high_resolution_clock::now();
 		//~ if (test) {
@@ -728,7 +727,7 @@ int main(int argc, char* argv[]) {
     //~ channels[0]->routine_thread = std::thread(routine, channels[0].get(), onnx_path);
     for (auto& channel : channels) {
 		channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
-        // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path);
+        // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path); 
         // channel->producer_thread = std::thread(producer, channel.get());
         // channel->inference_alarm_thread = std::thread(inference_alarm_worker, channel.get(), onnx_path);
         // channel->alarm_thread = std::thread(alarm_worker, channel.get());
