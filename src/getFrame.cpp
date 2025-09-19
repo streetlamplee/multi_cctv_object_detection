@@ -17,18 +17,18 @@ int connectRTSP(std::string url, cv::VideoCapture& cap){
     return 1;
 }
 
-int getFrame_api(std::string user, std::string password, std::string ip, int port, int channel, int width, int height, cv::Mat& frame) {
+int getFrame_api(std::string user, std::string password, std::string ip, int port, int channel, int width, int height, cv::Mat& frame, cv::Mat& sub_frame) {
     httplib::Client cli(ip, port);
     cli.set_digest_auth(user, password);
 
-    auto res = cli.Get("/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=704&videoResolutionHeight=480");
+    auto res = cli.Get("/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=1920&videoResolutionHeight=1080");
     if (res && res->status == 200) {
         
         std::vector<char> imageData (res->body.begin(), res->body.end());
         frame = cv::imdecode(imageData, cv::IMREAD_COLOR);
-        cv::resize(frame, frame, cv::Size(width, height));
-        if (frame.empty()) {
-            frame = cv::Mat::zeros(height, width, CV_8UC3);
+        cv::resize(frame, sub_frame, cv::Size(width, height));
+        if (sub_frame.empty()) {
+            sub_frame = cv::Mat::zeros(height, width, CV_8UC3);
         }
         cli.stop();
         return 1;
@@ -36,7 +36,7 @@ int getFrame_api(std::string user, std::string password, std::string ip, int por
     } else {
         auto err = res.error();
         std::cerr << "Error: " << err << std::endl;
-        frame = cv::Mat::zeros(height, width, CV_8UC3);
+        sub_frame = cv::Mat::zeros(height, width, CV_8UC3);
         cli.stop();
         return 0;
     }
