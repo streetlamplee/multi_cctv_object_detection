@@ -18,7 +18,7 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
 
         // alarm conf 끝일 경우,        *피드백 : conf 종료 양식 삭제
         // if (start_with(line, "[/")){
-        //     if (line.find(a->get_description(), 0) == 2){
+        //     if (line.find(a->get_name(), 0) == 2){
         //         alarms.push_back(*a);
         //     } else {
         //         std::cerr << "Error : conf 파일 중, 정확하지 않은 End of Parser가 존재합니다." << std::endl;
@@ -32,7 +32,7 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
             a = std::make_unique<Alarm>();
             std::string desc = line;
             strip(desc);
-            a->set_description(desc);
+            a->set_name(desc);
         }
 
         else if (start_with(line, "risk_level")){
@@ -45,6 +45,12 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
             std::vector<std::string> tokens;
             split(line, tokens, ':');
             a->set_target_channel(std::stoi(tokens[1]));
+        }
+
+        else if (start_with(line, "Alarm Sentence")){
+            std::vector<std::string> tokens;
+            split(line, tokens, ':');
+            a->set_alarm_sentence(tokens[1]);
         }
 
         else {
