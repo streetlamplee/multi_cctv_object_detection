@@ -16,18 +16,21 @@ public:
     ~Alarm();
 
     void set_target_channel(int target_channel);
-    void set_description(std::string des);
+    void set_name(std::string des);
     void set_condition(std::string cond);
     void set_risk_level(int r_lv);
+    void set_alarm_sentence(std::string s);
 
     int get_target_channel();
-    std::string get_description();
+    std::string get_name();
     std::string get_condition();
     int get_risk_level();
+    std::string get_alarm_sentence();
 
 private:
     int target_channel;
-    std::string description;
+    std::string name;
+    std::string alarm_sentence;
     std::string condition;
     int risk_level;
 

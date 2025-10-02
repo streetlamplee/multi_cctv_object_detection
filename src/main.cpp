@@ -107,7 +107,7 @@ void routine(CameraChannel* channel, std::string net_path){
     int width = std::stoi(g_ini.at("window_width"));
     int height = std::stoi(g_ini.at("window_height"));
     std::vector<Alarm> local_alarms = g_alarms;
-    std::string alarm_condition = "";
+    std::string now_alarm_condition = "";
     int alarm_timeout = 0;
     std::stringstream net_result;
     cv::dnn::Net net = cv::dnn::readNet(net_path);
@@ -183,6 +183,7 @@ void routine(CameraChannel* channel, std::string net_path){
         for (Alarm alarm : local_alarms) {
             std::string condition = alarm.get_condition();
             int target_channel = alarm.get_target_channel();
+            std::string alarm_sentence = alarm.get_alarm_sentence();
             
             if (target_channel != channel->CameraChannelID) {
                 continue;
@@ -192,22 +193,22 @@ void routine(CameraChannel* channel, std::string net_path){
             }
             if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
                 risk_level = alarm.get_risk_level();
-                alarm_condition = condition;
+                now_alarm_condition = alarm_sentence;
             }
         }
         // std::cout << "risk level : " << risk_level << std::endl;
         if (risk_level > channel->alarm) {
             channel->alarm = risk_level;
-            l << "Condition : " << alarm_condition << ", risk level : " << risk_level;
+            l <<  now_alarm_condition << std::endl;
             log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
             l.str("");
             l.clear();
-            std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
+            std::cout << "[ " << std::setw(2) << channel->CameraChannelID << "번 채널 ALARM ]"  << now_alarm_condition << std::endl;
 
-            l << "Warning condition approved,";
+            // l << "Warning condition approved,";
             // log_handler.push(Log::Level::ALARM, l.str(), channel->CameraChannelID);
-            l.str("");
-            l.clear();
+            // l.str("");
+            // l.clear();
             std::cout << "[Thread " << std::setw(2) << channel->CameraChannelID << "]" << "[Alarm] " << "Warning condition approved," << std::endl;
         } else if (risk_level == 0 and channel->alarm != 0) {
             alarm_timeout++;

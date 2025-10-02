@@ -8,21 +8,20 @@
         body {
             font-family: sans-serif;
             margin: 0;
-            display: flex;
+            display:flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             background-color: #f0f0f0;
-            padding: 20px 0;
+            padding: 0px 0;
         }
 
         .gallery-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            padding: 20px;
-            max-width: 1200px;
+            gap: 5px;
+            padding: 0px;
+            max-width: 1800px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -31,6 +30,8 @@
             overflow: hidden;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
         }
 
         .gallery-item img {
@@ -44,16 +45,14 @@
             transform: scale(1.05);
         }
 
-        /* 4열을 유지하면서 이미지 크기 비율을 맞추기 위한 CSS */
         @media (max-width: 768px) {
             .gallery-container {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(2, 1fr) !important; /* Mobile view override */
             }
         }
 
-        /* 텍스트 박스 스타일 */
         .text-box-container {
-            max-width: 1200px;
+            max-width: 1800px;
             width: 100%;
             margin-top: 30px;
             background-color: white;
@@ -94,7 +93,7 @@
             background-color: white;
             border-radius: 4px;
             border-left: 3px solid #007bff;
-            font-size: 0.7em;
+            font-size: 1.2em;
         }
 
         #notification-container {
@@ -102,8 +101,7 @@
             bottom: 20px;
             right: 20px;
             display: flex;
-            flex-direction: column; /* 새 알림이 기존 알림 위로 쌓이게 합니다. */
-            /* align-items: flex-end; */
+            flex-direction: column;
             z-index: 1000;
             max-height: 90vh;
             overflow-y: auto;
@@ -112,26 +110,50 @@
         }
 
         .toast-notification {
-            background-color: #333;
-            color: white;
-            padding: 16px;
+            background-color: #333; /* 바디와 유사한 밝은 배경색으로 변경 */
+            color: #f8f8f8; /* 텍스트 색상 변경 */
+            padding: 0; /* 내부에서 여백을 관리하므로 제거 */
             border-radius: 8px;
             margin-top: 10px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            width: 320px;
+            width: 500px; /* 너비 소폭 증가 */
             opacity: 0;
             transform: translateX(100%);
             transition: all 0.4s ease-in-out;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: stretch; /* 아이템들이 세로로 꽉 차도록 변경 */
+            overflow: hidden; /* border-radius가 자식 요소에 적용되도록 */
         }
 
-        /* 알림이 나타날 때의 애니메이션 효과 */
         .toast-notification.show {
             opacity: 1;
             transform: translateX(0);
         }
+
+        /* --- 추가된 스타일 시작 --- */
+        .toast-content {
+            flex-grow: 1; /* 닫기 버튼을 제외한 모든 공간 차지 */
+            display: flex;
+            flex-direction: column; /* 헤더와 바디를 수직으로 정렬 */
+        }
+
+        .toast-header {
+            background-color: #333; /* 기존과 같은 어두운 배경 */
+            color: #aaaaaa;
+            font-size: 1.1em;
+            padding: 8px 12px 4px 12px; /* 사용자가 조정할 수 있는 값: 헤더의 상하좌우 여백 */
+            /* border-bottom: 1px solid #444;  사용자가 조정할 수 있는 값: 헤더와 본문 구분선 */
+        }
+
+        .toast-body {
+            padding: 6px 12px 12px 12px; /* 사용자가 조정할 수 있는 값: 본문의 상하좌우 여백 */
+            color: white;
+            font-weight: bold;
+            font-size: 1.3em;
+            line-height: 1.4;
+        }
+        /* --- 추가된 스타일 끝 --- */
 
         .toast-notification .close-btn {
             background: none;
@@ -139,7 +161,9 @@
             color: #aaa;
             font-size: 20px;
             cursor: pointer;
-            margin-left: 15px;
+            padding: 0 15px; /* 닫기 버튼의 클릭 영역 확보 */
+            align-self: center; /* 중앙 정렬 */
+            margin-left: 0; /* toast-content 와의 간격 확보를 위해 제거 */
         }
 
         .toast-notification .close-btn:hover {
@@ -150,7 +174,7 @@
             width: 100%;
             padding: 10px;
             border: none;
-            background-color: #d9534f; /* 눈에 띄는 붉은 계열 색상 */
+            background-color: #d9534f;
             color: white;
             border-radius: 5px;
             cursor: pointer;
@@ -158,33 +182,138 @@
             margin-top: 10px;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* 숨겨져 있을 때 클릭 방지 */
+            pointer-events: none;
         }
 
         #close-all-btn.show {
             opacity: 1;
-            pointer-events: auto; /* 보일 때 클릭 활성화 */
+            pointer-events: auto;
+        }
+
+        .backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1001; /* Modal should be on top of this */
+        }
+
+        .gallery-item.focused {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 60vw;
+            max-width: 800px;
+            transform: translate(-50%, -50%) scale(2);
+            z-index: 1003; /* Focused image on top of everything */
+        }
+
+        .gallery-item.empty {
+            background-color: #000;
+            min-height: 150px;
+        }
+
+        .floating-btn {
+            position: fixed;
+            top : 20px;
+            left: 20px;
+            padding: 12px 24px;
+            border-radius: 30px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 999;
+        }
+
+        .modal-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1002;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            width: 90vw;
+            max-width: 600px;
+        }
+
+        .modal-panel .controls {
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .modal-header .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #888;
         }
     </style>
 </head>
 <body>
 
-    <div class="gallery-container" id="galleryContainer">
-        <div class="gallery-item"><img src="./output/01.jpg" alt="이미지 1"></div>
-        <div class="gallery-item"><img src="./output/02.jpg" alt="이미지 2"></div>
-        <div class="gallery-item"><img src="./output/03.jpg" alt="이미지 3"></div>
-        <div class="gallery-item"><img src="./output/04.jpg" alt="이미지 4"></div>
-        <div class="gallery-item"><img src="./output/05.jpg" alt="이미지 5"></div>
-        <div class="gallery-item"><img src="./output/06.jpg" alt="이미지 6"></div>
-        <div class="gallery-item"><img src="./output/07.jpg" alt="이미지 7"></div>
-        <div class="gallery-item"><img src="./output/08.jpg" alt="이미지 8"></div>
-        <div class="gallery-item"><img src="./output/09.jpg" alt="이미지 9"></div>
-        <div class="gallery-item"><img src="./output/10.jpg" alt="이미지 10"></div>
-        <div class="gallery-item"><img src="./output/11.jpg" alt="이미지 11"></div>
-        <div class="gallery-item"><img src="./output/12.jpg" alt="이미지 12"></div>
+    <div class="backdrop" id="backdrop"></div>
+
+    <div id="settingsModal" class="modal-panel" style="display: none;">
+        <div class="controls">
+            <div class="modal-header">
+                <h2>그리드 설정</h2>
+                <button id="closeSettingsBtn" class="close-btn">&times;</button>
+            </div>
+            <label for="colsInput">가로:</label>
+            <input type="number" id="colsInput" value="4" min="1">
+            <label for="rowsInput">세로:</label>
+            <input type="number" id="rowsInput" value="3" min="1">
+            
+            <label for="imageUrls" style="width: 100%;">이미지 URL (한 줄에 하나씩):</label>
+            <textarea id="imageUrls">./output/01.jpg
+./output/02.jpg
+./output/03.jpg
+./output/04.jpg
+./output/05.jpg
+./output/06.jpg
+./output/07.jpg
+./output/08.jpg
+./output/09.jpg
+./output/10.jpg
+./output/11.jpg
+./output/12.jpg</textarea>
+            
+            <button id="updateGridBtn">그리드 업데이트</button>
+        </div>
     </div>
 
-    <!-- 스크롤되는 텍스트 박스 -->
+    <div class="gallery-container" id="galleryContainer"></div>
+
+    <button id="openSettingsBtn" class="floating-btn">설정</button>
+
     <div class="text-box-container">
         <div class="text-box-header">
             <span>실시간 로그</span>
@@ -197,198 +326,7 @@
 
     <div id="notification-container"></div>
 
-    <script>
-        let counter = 0;
-        const counterElement = document.getElementById('counter');
-        const textBox = document.getElementById('textBox');
-        const totalImages = 12;
-        const imageBaseName = "./output/";
-        const imageExtension = ".jpg";
-        let last_alarm = "";
-
-        // const modal = document.getElementById("myModal");
-        // const closeBtn = document.getElementById("closeBtn");
-
-        // function showModal(title, message) {
-        //     // 1. myModal div 안에서 h2와 p 요소를 찾습니다.
-        //     const modalTitle = modal.querySelector("h2");
-        //     const modalMessage = modal.querySelector("p");
-
-        //     // 2. 함수의 인자로 받은 title과 message로 내용을 변경합니다.
-        //     modalTitle.innerText = title;
-        //     modalMessage.innerText = message;
-
-        //     // 3. 모달을 화면에 보여줍니다.
-        //     modal.style.display = "block";
-        // }
-
-        // function hideModal() {
-        //     modal.style.display = "none";
-        // }
-
-        // closeBtn.onclick = hideModal;
-
-        /**
-         * 새로운 토스트 알림을 생성하는 함수
-         * @param {string} message - 알림에 표시할 메시지
-         */
-        function updateCloseAllButtonVisibility() {
-            const container = document.getElementById('notification-container');
-            const notifications = container.querySelectorAll('.toast-notification');
-            let closeAllBtn = document.getElementById('close-all-btn');
-
-            // 알림이 2개 이상일 때
-            if (notifications.length >= 2) {
-                if (!closeAllBtn) { // 버튼이 없다면 새로 생성
-                    closeAllBtn = document.createElement('button');
-                    closeAllBtn.id = 'close-all-btn';
-                    closeAllBtn.innerText = '알림 모두 닫기';
-                    
-                    closeAllBtn.onclick = () => {
-                        container.querySelectorAll('.toast-notification').forEach(n => {
-                            n.classList.remove('show');
-                            n.addEventListener('transitionend', () => n.remove());
-                        });
-                        closeAllBtn.classList.remove('show');
-                        closeAllBtn.addEventListener('transitionend', () => closeAllBtn.remove());
-                    };
-                }
-                
-                // ★★★ 핵심 수정사항 ★★★
-                // 버튼을 항상 컨테이너의 맨 마지막으로 추가(이동)시킵니다.
-                // 버튼이 이미 존재할 경우, 이 코드는 버튼을 맨 아래로 '이동'시키는 역할을 합니다.
-                container.appendChild(closeAllBtn);
-                
-                // 애니메이션을 위해 show 클래스 추가
-                setTimeout(() => closeAllBtn.classList.add('show'), 10);
-
-            // 알림이 2개 미만일 때
-            } else if (closeAllBtn) {
-                // 버튼이 존재하면 숨기고 제거
-                closeAllBtn.classList.remove('show');
-                closeAllBtn.addEventListener('transitionend', () => closeAllBtn.remove());
-            }
-        }
-
-        function createNotification(message) {
-            const container = document.getElementById('notification-container');
-
-            const notification = document.createElement('div');
-            notification.className = 'toast-notification';
-            
-            notification.innerHTML = `
-                <span>${message}</span>
-                <button class="close-btn">&times;</button>
-            `;
-            
-            container.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 10);
-
-            // 닫기 버튼 클릭 시 알림 삭제
-            notification.querySelector('.close-btn').onclick = () => {
-                notification.classList.remove('show');
-                notification.addEventListener('transitionend', () => {
-                    notification.remove();
-                    // 알림이 닫힌 후 버튼 상태 업데이트
-                    updateCloseAllButtonVisibility();
-                });
-            };
-
-            container.scrollTop = container.scrollHeight;
-            
-            // 새 알림이 추가되었으므로 버튼 상태 업데이트
-            updateCloseAllButtonVisibility();
-        }
-
-        // 1초마다 카운터 증가 및 텍스트 추가
-        setInterval(() => {
-            const timestamp = new Date().getTime();
-
-            for (let i = 1; i <= totalImages; i++) {
-                const fileName = imageBaseName + String(i).padStart(2,'0') + imageExtension;
-
-                const imgElement = document.querySelector(`img[src^="${fileName}"]`);
-                if (imgElement) {
-                    imgElement.src = fileName + '?t=' + timestamp;
-                }
-            }
-        }, 200);
-        
-        setInterval(() => {
-            let this_interval_last_alarm = "";
-            // fetch API를 사용하여 서버의 로그 파일을 비동기적으로 가져옵니다.
-            fetch('./app.log', { cache: 'no-store' }) // 캐시를 사용하지 않도록 설정
-                .then(response => {
-                    // 응답이 성공적이지 않으면 (예: 파일이 없는 경우 404) 에러를 발생시킵니다.
-                    if (!response.ok) {
-                        throw new Error('로그 파일을 찾을 수 없습니다.');
-                    }
-                    // 응답을 텍스트로 변환하여 반환합니다.
-                    return response.text();
-                })
-                .then(text => {
-                    // 파일 내용을 성공적으로 가져온 후 실행됩니다.
-                    
-                    // 1. 기존의 textBox 내용을 모두 비웁니다.
-                    textBox.innerHTML = '';
-
-                    // 2. 텍스트를 줄바꿈 기준으로 나누어 배열로 만듭니다.
-                    let lines = text.split('\n');
-                    
-                    // 3. 너무 많은 라인이 쌓이지 않도록 제한 (최신 50줄만 유지)
-                    if (lines.length > 50) {
-                        lines = lines.slice(lines.length - 50);
-                    }
-
-                    // 4. 각 라인을 순회하며 textBox에 자식 요소(div)로 추가합니다.
-                    lines.forEach(line => {
-                        // 내용이 비어있는 줄은 추가하지 않습니다.
-                        if (line.trim() !== '') {
-                            const lineElement = document.createElement('div');
-                            lineElement.className = 'text-line'; // CSS 클래스 적용
-                            lineElement.textContent = line;
-                            textBox.appendChild(lineElement);
-                        }
-                        if (line.includes("ALARM")) {
-                            this_interval_last_alarm = line;
-                        }
-                    });
-
-                    // 5. 자동 스크롤 (최신 내용이 보이도록)
-                    textBox.scrollTop = textBox.scrollHeight;
-
-                    const allAlarmsInLog = lines.filter(line => line.includes("ALARM"));
-
-                    if (allAlarmsInLog.length > 0) {
-                        // 마지막으로 보았던 알람이 현재 로그에 어디 있는지 찾습니다.
-                        const lastAlarmIndex = last_alarm ? allAlarmsInLog.lastIndexOf(last_alarm) : -1;
-
-                        // 마지막으로 본 알람 '이후'의 새로운 알람들을 찾습니다.
-                        const newAlarms = allAlarmsInLog.slice(lastAlarmIndex + 1);
-                        
-                        // 각각의 새로운 알람에 대해 알림을 생성합니다.
-                        newAlarms.forEach(alarm => {
-                            createNotification(alarm);
-                        });
-                        
-                        // 마지막 알람을 새롭게 업데이트합니다.
-                        if (newAlarms.length > 0) {
-                            last_alarm = newAlarms[newAlarms.length - 1];
-                        }
-                    }
-                })
-                .catch(error => {
-                    // 파일 가져오기 실패 시 콘솔에 에러를 출력합니다.
-                    console.error('로그 파일 로딩 오류:', error);
-                    // 사용자에게도 피드백을 줄 수 있습니다.
-                    // textBox.textContent = '로그를 불러오는 데 실패했습니다.';
-                });
-            counter = 1;
-        }, 3000);
-    </script>
+    <script src="script.js" defer></script>
 
 </body>
 </html>
