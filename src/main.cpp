@@ -19,13 +19,16 @@
 #include "fileServer.h"
 #include "timestamp.h"
 #include "directory.h"
+#include "alarmManager.h" // 1106 hj modbus 적용
+#include "_modbus/modbus_handler.h"
 
 // --- Global Variables ---
 cv::Mat g_canvas;
 // std::mutex g_canvas_mutex;
 // std::mutex g_alarm_mutex;
 bool g_running = true;
-std::vector<Alarm> g_alarms;
+// std::vector<Alarm> g_alarms; // 1106 hj modbus 적용
+AlarmManager g_alarm_manager; // 1106 hj modbus 적용
 std::unordered_map<std::string, std::string> g_ini;
 int g_queueMaxSize = 5;
 sem_t *g_sem_image;
@@ -106,9 +109,9 @@ void routine(CameraChannel* channel, std::string net_path){
     int port = std::stoi(g_ini["port"]);
     int width = std::stoi(g_ini.at("window_width"));
     int height = std::stoi(g_ini.at("window_height"));
-    std::vector<Alarm> local_alarms = g_alarms;
-    std::string now_alarm_condition = "";
-    int alarm_timeout = 0;
+    // std::vector<Alarm> local_alarms = g_alarms; // 1106 hj modbus 적용
+    // std::string now_alarm_condition = ""; // 1106 hj modbus 적용
+    // int alarm_timeout = 0; // 1106 hj modbus 적용
     std::stringstream net_result;
     cv::dnn::Net net = cv::dnn::readNet(net_path);
     if (net.empty()) {
@@ -147,7 +150,7 @@ void routine(CameraChannel* channel, std::string net_path){
         
         
         // 추론 process
-        int risk_level = 0;
+        // int risk_level = 0; // 1106 hj modbus 적용
 
         channel->detected_class.clear();
         if (frame.empty() || !g_running) {
@@ -174,6 +177,15 @@ void routine(CameraChannel* channel, std::string net_path){
             channel->detected_class.push_back(det.classID);
         }
 
+        // 1106 hj modbus 적용
+        g_alarm_manager.process_channel_alarms(channel->CameraChannelID, channel->detected_class);
+        int status_reg = g_alarm_manager.get_modbus_alarm_status_reg(channel->CameraChannelID);
+        if (status_reg != -1) {
+            channel->alarm = modbus_handler_get_ireg(status_reg);
+        }
+
+        // 1106 hj modbus 적용 - 기존 알람 로직 주석 처리
+        /*
         std::vector<int> detectedClass = channel->detected_class;
 
         // for (auto& det: result) {
@@ -217,6 +229,7 @@ void routine(CameraChannel* channel, std::string net_path){
                 channel->alarm = 0;
             }
         } else { }
+        */
         
         //~ end = std::chrono::high_resolution_clock::now();
 		//~ if (test) {
@@ -379,7 +392,7 @@ void routine(CameraChannel* channel, std::string net_path){
 //         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 //     }
 // }
-
+//
 // // Inference Worker: Performs object detection for a specific camera channel
 // void inference_alarm_worker(CameraChannel* channel, const std::string net_path) {
 //     std::vector<Alarm> local_alarms = g_alarms;
@@ -432,7 +445,7 @@ void routine(CameraChannel* channel, std::string net_path){
 //         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 //     }
 // }
-
+//
 // // Display: Manages the main canvas, drawing frames and results from all channels
 // void canvas_painter(std::vector<std::unique_ptr<CameraChannel>>& channels) {
 //     std::vector<cv::Mat> latest_frames(channels.size());
@@ -515,9 +528,7 @@ void routine(CameraChannel* channel, std::string net_path){
 //                 }
 //             }
 //         }
-
-        
-
+//
 //         //0903 fps 테스트용
 //         // if (isUpdated){
 //         // auto end = std::chrono::high_resolution_clock::now();
@@ -532,7 +543,7 @@ void routine(CameraChannel* channel, std::string net_path){
 //         std::cout << std::endl;
 //     }
 // }
-
+//
 // // void alarm_worker(CameraChannel* cc) {
 // //     std::vector<Alarm> local_alarms = g_alarms;
 // //     std::string alarm_condition = "";
@@ -571,7 +582,7 @@ void routine(CameraChannel* channel, std::string net_path){
 // //
 // //     }
 // // }
-
+//
 // void image_show_worker() {
 //     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 //     std::stringstream ss_title;
@@ -587,7 +598,7 @@ void routine(CameraChannel* channel, std::string net_path){
 //         }
 //     }
 // }
-
+//
 // int main_for_test(int argc, char* argv[]) {
 //     std::string ini_path = "../app.ini";
 //     read_ini(ini_path, g_ini);
@@ -604,7 +615,7 @@ void routine(CameraChannel* channel, std::string net_path){
 //     cv::destroyAllWindows();
 //     return 0;
 // }
-
+//
 // int main_before_0908(int argc, char* argv[]) { // channel과 기능 별로 모든 thread 를 분리
     // --- Initialization ---
 //     std::string onnx_path = "./resource/yolov8n.onnx";
@@ -675,8 +686,9 @@ int main(int argc, char* argv[]) {
     std::string config_path = "./resource/alarm.conf";
     std::string ini_path = "./resource/app.ini";
 
-    read_conf(config_path, g_alarms);
+    // read_conf(config_path, g_alarms); // 1106 hj modbus 적용
     read_ini(ini_path, g_ini);
+    g_alarm_manager.load_alarms_from_file(config_path); // 1106 hj modbus 적용
 
     log_handler.load();
 
@@ -723,6 +735,9 @@ int main(int argc, char* argv[]) {
     // channels[3]->connection_url = "";
 
     // --- Start Threads ---
+    modbus_handler_init();
+    modbus_handler_start();
+    printf("Modbus Handler Started!\n");
 
     log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행");
     //~ channels[0]->routine_thread = std::thread(routine, channels[0].get(), onnx_path);

@@ -4,7 +4,7 @@
 #include <sstream>      // for std::stringstream
 #include <iostream>     // for std::cout, std::cerr
 #include <deque>        // for std::deque
-// #include <mutex>        // for std::mutex
+#include <mutex>        // for std::mutex
 #include <semaphore.h>
 #include <iomanip>      // for std::put_time
 
@@ -24,8 +24,12 @@ class Log{
 
     }
     ~Log() {
-        if (!this->lastNlines.empty()) {
-            this->save();
+        try {
+            if (!this->lastNlines.empty()) {
+                this->save();
+            }
+        } catch (...) {
+            // Destructors should not throw. Suppress all exceptions.
         }
     }
 
@@ -36,7 +40,7 @@ class Log{
     void load();
 };
 
-void Log::push(Level level, std::string message, int thread_num) {
+inline void Log::push(Level level, std::string message, int thread_num) {
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
@@ -62,11 +66,11 @@ void Log::push(Level level, std::string message, int thread_num) {
     }
 }
 
-std::string Log::getFilename() {
+inline std::string Log::getFilename() {
     return this->filename;
 }
 
-void Log::load() {
+inline void Log::load() {
     if (this->filename.empty()) {
         std::cerr << "ERR: No Filename" << std::endl;
     }
@@ -81,7 +85,7 @@ void Log::load() {
     }
 }
 
-void Log::save() {
+inline void Log::save() {
     if (this->filename.empty()) {
         std::cerr << "ERR: No Filename" << std::endl;
     }

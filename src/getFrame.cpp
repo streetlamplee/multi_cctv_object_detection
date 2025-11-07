@@ -8,10 +8,10 @@ int connectRTSP(std::string url, cv::VideoCapture& cap){
     // if (!cap.open(url)) {
         std::cerr << "Cannot Open Video with HW Acceleration" << std::endl;
         // 만약 위 코드가 실패하면, 다음 라인의 주석을 풀고 다시 시도해 보세요.
-        // if (!cap.open(url, cv::CAP_FFMPEG)) {
-        //     std::cerr << "Cannot Open Video" << std::endl;
-        //     return -1;
-        // }
+        if (!cap.open(url, cv::CAP_FFMPEG)) {
+            std::cerr << "Cannot Open Video" << std::endl;
+            return -1;
+        }
         return -1;
     }
     return 1;
@@ -22,7 +22,7 @@ int getFrame_api(std::string user, std::string password, std::string ip, int por
     cli.set_digest_auth(user, password);
 
     auto res = cli.Get("/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=1920&videoResolutionHeight=1080");
-    if (res && res->status == 200) {
+    if (res) {
         
         std::vector<char> imageData (res->body.begin(), res->body.end());
         frame = cv::imdecode(imageData, cv::IMREAD_COLOR);
@@ -35,7 +35,7 @@ int getFrame_api(std::string user, std::string password, std::string ip, int por
          
     } else {
         auto err = res.error();
-        std::cerr << "Error: " << err << std::endl;
+        // std::cerr << "Error: " << err << std::endl;
         sub_frame = cv::Mat::zeros(height, width, CV_8UC3);
         cli.stop();
         return 0;

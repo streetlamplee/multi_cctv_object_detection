@@ -23,6 +23,11 @@ void Alarm::set_risk_level(int r_lv){
 void Alarm::set_alarm_sentence(std::string s){
     this->alarm_sentence = s;
 }
+// 1106 hj modbus 적용
+void Alarm::set_id(int id){
+    this->id = id;
+}
+
 int Alarm::get_target_channel(){
     return this->target_channel;
 }
@@ -37,6 +42,10 @@ int Alarm::get_risk_level(){
 }
 std::string Alarm::get_alarm_sentence(){
     return this->alarm_sentence;
+}
+// 1106 hj modbus 적용
+int Alarm::get_id(){
+    return this->id;
 }
 
 bool define_alarm (std::string condition, const std::vector<int>& detectedClass) {
