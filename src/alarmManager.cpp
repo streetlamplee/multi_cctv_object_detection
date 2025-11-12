@@ -68,26 +68,26 @@ void AlarmManager::process_channel_alarms(int channel_id, const std::vector<int>
     }
 }
 
-// 1106 hj modbus 적용
+// 1110 hj modbus 적용
 int AlarmManager::get_modbus_alarm_status_reg(int channel_id) {
-    if (channel_id >= 1 && channel_id <= 12) {
-        return MODBUS_IREG_CHANNEL1_ALARM_STATUS + (channel_id - 1) * 2;
+    if (channel_id >= 1 && channel_id <= 30) {
+        return MODBUS_IREG_SYSTEM_RESERVED + (channel_id - 1) * 2;
     }
     return -1; // Invalid channel
 }
 
-// 1106 hj modbus 적용
+// 1110 hj modbus 적용
 int AlarmManager::get_modbus_alarm_id_reg(int channel_id) {
-    if (channel_id >= 1 && channel_id <= 12) {
-        return MODBUS_IREG_CHANNEL1_ALARM_ID + (channel_id - 1) * 2;
+    if (channel_id >= 1 && channel_id <= 30) {
+        return MODBUS_IREG_SYSTEM_RESERVED + 1 + (channel_id - 1) * 2;
     } 
     return -1; // Invalid channel
 }
 
-// 1106 hj modbus 적용
+// 1110 hj modbus 적용
 int AlarmManager::get_modbus_alarm_complete_reg(int channel_id) {
-    if (channel_id >= 1 && channel_id <= 12) {
-        return MODBUS_HREG_CHANNEL1_ALARM_COMPLETE + (channel_id - 1) * 2;
+    if (channel_id >= 1 && channel_id <= 30) {
+        return MODBUS_HREG_SYSTEM_OPTION_RESERVED + (channel_id - 1) * 2;
     }
     return -1; // Invalid channel
 }

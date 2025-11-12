@@ -50,30 +50,33 @@ void modbus_handler_init()
     }
 
     // 메모리 맵 기본값 설정
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL1_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL2_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL3_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL4_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL5_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL6_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL7_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL8_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL9_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL10_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL11_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL12_ALARM_STATUS] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL1_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL2_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL3_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL4_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL5_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL6_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL7_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL8_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL9_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL10_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL11_ALARM_ID] = 0;
-    mb_mapping->tab_registers[MODBUS_IREG_CHANNEL12_ALARM_ID] = 0;
+    for (int i = 0; i < 100; i ++) {
+        mb_mapping->tab_registers[i] = 0;
+    }
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL1_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL2_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL3_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL4_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL5_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL6_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL7_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL8_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL9_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL10_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL11_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL12_ALARM_STATUS] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL1_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL2_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL3_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL4_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL5_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL6_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL7_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL8_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL9_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL10_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL11_ALARM_ID] = 0;
+    // mb_mapping->tab_registers[MODBUS_IREG_CHANNEL12_ALARM_ID] = 0;
     
 
     /* // 1107 hj aarch64 compile 코드 적용
