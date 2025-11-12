@@ -35,10 +35,10 @@ int read_conf(std::string config_path, std::vector<Alarm>& alarms) {
             a->set_name(desc);
         }
 
-        else if (start_with(line, "risk_level")){
+        else if (start_with(line, "alarm_id")){
             std::vector<std::string> tokens;
             split(line, tokens, ':');
-            a->set_risk_level(std::stoi(tokens[1]));
+            a->set_alarm_id(std::stoi(tokens[1]));
         }
 
         else if (start_with(line, "target_channel")){

@@ -18,14 +18,14 @@ public:
     void set_target_channel(int target_channel);
     void set_name(std::string des);
     void set_condition(std::string cond);
-    void set_risk_level(int r_lv);
+    void set_alarm_id(int r_lv);
     void set_alarm_sentence(std::string s);
     void set_id(int id); // 1106 hj modbus 적용
 
     int get_target_channel();
     std::string get_name();
     std::string get_condition();
-    int get_risk_level();
+    int get_alarm_id();
     std::string get_alarm_sentence();
     int get_id(); // 1106 hj modbus 적용
 
@@ -35,7 +35,7 @@ private:
     std::string name;
     std::string alarm_sentence;
     std::string condition;
-    int risk_level;
+    int alarm_id;
 
 };
 

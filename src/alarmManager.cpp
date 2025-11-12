@@ -55,7 +55,7 @@ void AlarmManager::process_channel_alarms(int channel_id, const std::vector<int>
             if (define_alarm(alarm.get_condition(), detected_classes)) {
                 // 5. Modbus에 알람 정보 전송
                 modbus_handler_set_ireg(status_reg, 1); // status = true
-                modbus_handler_set_ireg(id_reg, alarm.get_id());
+                modbus_handler_set_ireg(id_reg, alarm.get_alarm_id());
                 
                 std::string log_msg = "ALARM on channel " + std::to_string(channel_id) + ": " + alarm.get_alarm_sentence();
                 // 1107 hj aarch64 compile 코드 적용

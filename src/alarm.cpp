@@ -5,7 +5,7 @@ Alarm::Alarm(int target_channel, std::string des, std::string cond, int r_lv) {
     this->target_channel = target_channel;
     this->name = des;
     this->condition = cond;
-    this->risk_level = r_lv;
+    this->alarm_id = r_lv;
 }
 Alarm::~Alarm() {}
 void Alarm::set_target_channel(int target_channel){
@@ -17,8 +17,8 @@ void Alarm::set_name(std::string des){
 void Alarm::set_condition(std::string cond){
     this->condition = cond;
 }
-void Alarm::set_risk_level(int r_lv){
-    this->risk_level = r_lv;
+void Alarm::set_alarm_id(int r_lv){
+    this->alarm_id = r_lv;
 }
 void Alarm::set_alarm_sentence(std::string s){
     this->alarm_sentence = s;
@@ -37,8 +37,8 @@ std::string Alarm::get_name(){
 std::string Alarm::get_condition(){
     return this->condition;
 }
-int Alarm::get_risk_level(){
-    return this->risk_level;
+int Alarm::get_alarm_id(){
+    return this->alarm_id;
 }
 std::string Alarm::get_alarm_sentence(){
     return this->alarm_sentence;
