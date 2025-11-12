@@ -1,5 +1,5 @@
 # 1. 베이스 이미지: AARCH64 아키텍처의 bullseye
-FROM --platform=linux/aarch64 debian:bullseye
+FROM --platform=linux/amd64 debian:trixie
 
 # 2. apt 패키지 설치 (OpenCV 빌드에 필요한 의존성 추가)
 RUN apt update && apt install -y \
@@ -18,7 +18,8 @@ RUN apt update && apt install -y \
     libgfortran5 \
     libssl-dev \
     libmodbus-dev \
-    && apt clean
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 3. OpenCV 4.8.0 소스에서 빌드 및 설치
 RUN wget -O opencv.zip https://github.com/opencv/opencv/archive/4.8.0.zip && \

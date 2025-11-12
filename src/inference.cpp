@@ -47,7 +47,7 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     net.forward(outputs, output_names);
 
     //  결과 처리
-    float confidence_threshold = 0.5f;
+    float confidence_threshold = 0.6f;
     float nms_threshold = 0.5f;
 
     std::vector<int> class_ids;

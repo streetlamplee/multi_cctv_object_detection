@@ -97,6 +97,31 @@ void log_worker() {
     }
 }
 
+void modbus_alarm_reset_worker() {
+    while (g_running) {
+        int total_channels = std::stoi(g_ini.at("total_window_count"));
+        for (int channel_id = 1; channel_id <= total_channels; ++channel_id) {
+            int complete_reg = g_alarm_manager.get_modbus_alarm_complete_reg(channel_id);
+            if (complete_reg != -1 && modbus_handler_get_hreg(complete_reg) == 1) {
+                int status_reg = g_alarm_manager.get_modbus_alarm_status_reg(channel_id);
+                int id_reg = g_alarm_manager.get_modbus_alarm_id_reg(channel_id);
+
+                // 알람 상태 초기화
+                modbus_handler_set_ireg(status_reg, 0); // status = false
+                modbus_handler_set_ireg(id_reg, 0);     // id = 0
+                modbus_handler_set_hreg(complete_reg, 0); // 완료 신호 초기화
+
+                // 쿨다운 시작
+                g_alarm_manager.start_cooldown(channel_id);
+
+                log_handler.push(Log::Level::INFO, "Alarm reset for channel " + std::to_string(channel_id));
+                std::cout << "INFO: Alarm reset for channel " << channel_id << std::endl;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1)); // 1 마다 확인
+    }
+}
+
 // routine : 하나의 Camera Channel에 할당되는 routine 구현
 void routine(CameraChannel* channel, std::string net_path){
     std::string data_gathering_point = g_ini.at("data_gathering_point");
@@ -751,6 +776,7 @@ int main(int argc, char* argv[]) {
     // std::thread painter_thread(canvas_painter, std::ref(channels));
     // std::thread imageshow_thread(image_show_worker);
     std::thread log_thread(log_worker);
+    std::thread modbus_reset_thread(modbus_alarm_reset_worker);
 
     // 0910 httplib 대신 nginx 사용으로 변경
     // std::thread server_thread(server_worker);
@@ -767,6 +793,7 @@ int main(int argc, char* argv[]) {
     // painter_thread.join();
     // imageshow_thread.join();
     log_thread.join();
+    modbus_reset_thread.join();
 
     // 0910 httplib 대신 nginx 사용으로 변경
     // server_thread.join();

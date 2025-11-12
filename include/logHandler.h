@@ -51,10 +51,10 @@ inline void Log::push(Level level, std::string message, int thread_num) {
 
     std::string prefix = ss.str();
     switch (level){
-        case Level::INFO:       prefix += " INFO]";     break;
+        case Level::INFO:       prefix += " INFO   ]";     break;
         case Level::WARNING:    prefix += " WARNING]";  break;
-        case Level::ERROR:      prefix += " ERROR]";    break;
-        case Level::ALARM:      prefix += " ALARM]";    break;
+        case Level::ERROR:      prefix += " ERROR  ]";    break;
+        case Level::ALARM:      prefix += " ALARM  ]";    break;
         case Level::SIZE:       prefix += "";           break;
     }
     prefix.resize(50, ' ');

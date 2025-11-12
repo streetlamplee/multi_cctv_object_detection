@@ -19,9 +19,9 @@ set -e
 
 # 2. 🛡️ 아키텍처 안전장치
 ARCH=$(uname -m)
-if [ "$ARCH" != "aarch64" ]; then
-    echo "🛑 ERROR: This script must be run inside the aarch64 container."
-    echo "   Current architecture is '$ARCH', not 'aarch64'."
+if [ "$ARCH" != "x86_64" ]; then
+    echo "🛑 ERROR: This script must be run inside the x86_64 container."
+    echo "   Current architecture is '$ARCH', not 'x86_64'."
     exit 1
 fi
 
@@ -75,7 +75,7 @@ echo "-------------------------------------"
 echo "✅ SDK Packaging Complete."
 echo "-------------------------------------"
 echo "Directory '$SDK_ROOT_DIR' is ready."
-echo "이제 '/app' 디렉토리에서 'app' 폴더 전체를 aarch64 타겟 보드로 복사하세요."
+echo "이제 '/app' 디렉토리에서 'app' 폴더 전체를 타겟 보드로 복사하세요."
 echo ""
 echo "타겟 보드에서 실행 방법:"
 echo "  cd app"
