@@ -17,7 +17,7 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     };
     // image padding
     int s = 224;
-    cv::Mat input(s,s, CV_8UC3, cv::Scalar(0,0,0));
+    cv::Mat input(s,s, CV_8UC3, cv::Scalar(114,114,114));
     cv::Mat resized_image;
     float r_w = s / (float)image.cols;
     float r_h = s / (float)image.rows;
@@ -26,7 +26,7 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     int new_height = (int)(image.rows * r);
     cv::resize(image, resized_image, cv::Size(new_width, new_height), 0, 0, cv::INTER_AREA);
     
-    int top_pad = (s - new_height) / 2;
+    int top_pad = 0;
     int left_pad = (s - new_width) / 2;
 
     resized_image.copyTo(input(cv::Rect(left_pad, top_pad, new_width, new_height)));
@@ -47,7 +47,7 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     net.forward(outputs, output_names);
 
     //  결과 처리
-    float confidence_threshold = 0.6f;
+    float confidence_threshold = 0.4f;
     float nms_threshold = 0.5f;
 
     std::vector<int> class_ids;

@@ -725,13 +725,13 @@ int main(int argc, char* argv[]) {
     }
 
     sem_unlink(get_image_sem_name);
-    g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 3);
+    g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 6);
     if (g_sem_image == SEM_FAILED) {
         std::cerr<<"sem_open failed (get_image)" << std::endl;
         return 1;
     }
     sem_unlink(infer_sem_name);
-    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 9);
+    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 6);
     if (g_sem_inference == SEM_FAILED) {
         std::cerr << "sem_open failed (inference)" << std::endl;
         return 1;
