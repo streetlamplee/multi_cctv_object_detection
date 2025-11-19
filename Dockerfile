@@ -18,6 +18,8 @@ RUN apt update && apt install -y \
     libgfortran5 \
     libssl-dev \
     libmodbus-dev \
+    mosquitto mosquitto-clients \
+    libpaho-mqttpp-dev libpaho-mqtt-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 

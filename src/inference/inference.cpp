@@ -1,5 +1,5 @@
-#include "inference.h"
-
+#include "inference/inference.h"
+    
 std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     // 클래스 이름 정의 (YOLOv8의 80개 COCO 클래스)
     std::vector<std::string> class_names = {

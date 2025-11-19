@@ -1,4 +1,4 @@
-#include "alarm.h"
+#include "alarm/alarm.h"
 
 Alarm::Alarm() {}
 Alarm::Alarm(int target_channel, std::string des, std::string cond, int r_lv) {

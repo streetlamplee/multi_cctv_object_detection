@@ -1,7 +1,7 @@
-#include "thread_safe_stack.h"
-#include "thread_safe_queue.h"
-#include "cctv.h"
-#include "inference.h"
+#include "thread_safe/thread_safe_stack.h"
+#include "thread_safe/thread_safe_queue.h"
+#include "cctv/cctv.h"
+#include "inference/inference.h"
 #include <thread>
 #include <iostream>
 #include <vector>
@@ -9,17 +9,17 @@
 #include <semaphore.h>
 #include <chrono>
 #include <algorithm> // Required for std::find
-#include "configHandler.h"
-#include "alarm.h"
-#include "iniHandler.h"
+#include "config/configHandler.h"
+#include "alarm/alarm.h"
+#include "config/iniHandler.h"
 #include <sstream>
 #include <filesystem>
 #include <iomanip>      // std::setw, std::setfill
-#include "logHandler.h"
-#include "fileServer.h"
-#include "timestamp.h"
-#include "directory.h"
-#include "alarmManager.h" // 1106 hj modbus 적용
+#include "config/logHandler.h"
+// #include "legacy/fileServer.h"
+#include "time/timestamp.h"
+#include "data_save/directory.h"
+#include "alarm/alarmManager.h" // 1106 hj modbus 적용
 #include "_modbus/modbus_handler.h"
 
 // --- Global Variables ---

@@ -9,7 +9,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 
-#include "ini.h"
+#include "config/ini.h"
 #include "_modbus/modbus_handler.h"
 
 #define INI_FILE "config.ini"

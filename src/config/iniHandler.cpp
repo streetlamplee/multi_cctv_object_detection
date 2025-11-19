@@ -1,4 +1,4 @@
-#include "iniHandler.h"
+#include "config/iniHandler.h"
 
 
 /* @brief ini 파일을 읽는 함수

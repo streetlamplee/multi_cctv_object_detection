@@ -1,7 +1,7 @@
 #pragma once
 
-#include "alarm.h"
-#include "logHandler.h"
+#include "alarm/alarm.h"
+#include "config/logHandler.h"
 #include <vector>
 #include <string>
 #include <chrono>

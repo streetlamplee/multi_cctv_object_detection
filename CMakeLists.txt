@@ -8,6 +8,7 @@ find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(PahoMqttCpp REQUIRED)
 pkg_check_modules(MODBUS REQUIRED libmodbus)
 
 add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
@@ -16,17 +17,17 @@ message(STATUS "Found OpenCV version: ${OpenCV_VERSION}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
 add_executable(app 
     src/main.cpp
-    src/cctv.cpp
-    src/getFrame.cpp
-    src/inference.cpp
-    src/alarm.cpp
-    src/Handler.cpp
-    src/configHandler.cpp
-    src/WindowHandler.cpp
-    src/iniHandler.cpp
-    src/alarmManager.cpp
+    src/cctv/cctv.cpp
+    src/cctv/getFrame.cpp
+    src/inference/inference.cpp
+    src/alarm/alarm.cpp
+    src/config/Handler.cpp
+    src/config/configHandler.cpp
+    # src/WindowHandler.cpp
+    src/config/iniHandler.cpp
+    src/alarm/alarmManager.cpp
     src/_modbus/modbus_handler.c
-    src/ini.c
+    src/config/ini.c
 )
 
 target_include_directories(app PRIVATE
@@ -43,4 +44,5 @@ target_link_libraries(app PRIVATE
     ${OPENSSL_LIBRARIES}
     ${MODBUS_STATIC_LIBRARIES}
     Threads::Threads
+    PahoMqttCpp::paho-mqttpp3
 )
