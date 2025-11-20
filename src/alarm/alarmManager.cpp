@@ -13,6 +13,10 @@ AlarmManager::AlarmManager() {}
 // 1106 hj modbus 적용
 AlarmManager::~AlarmManager() {}
 
+void AlarmManager::set_cooltime(int cooltime) {
+    this->cooltime = cooltime;
+}
+
 void AlarmManager::start_cooldown(int channel_id) {
     std::lock_guard<std::mutex> lock(cooldown_mutex);
     channel_cooldowns[channel_id] = std::chrono::steady_clock::now();
@@ -42,7 +46,10 @@ void AlarmManager::load_alarms_from_file(const std::string& file_path) {
 }
 
 // 1119 hj mqtt 적용
-int AlarmManager::process_channel_alarms(int channel_id, const std::vector<int>& detected_classes, std::string camera_description) {
+int AlarmManager::process_channel_alarms(int channel_id,
+                                         const std::vector<int>& detected_classes,
+                                         std::string camera_description,
+                                         std::string robotDestination) {
     // 쿨다운 상태이거나 이미 알람이 활성화된 경우, 새로운 알람을 확인하지 않음
     if (is_on_cooldown(channel_id)) {
         return -1;
@@ -71,10 +78,11 @@ int AlarmManager::process_channel_alarms(int channel_id, const std::vector<int>&
                 // modbus_handler_set_ireg(id_reg, alarm.get_alarm_id());
                 
                 json j;
-                j["alarm_uuid"] = this->counter++;
+                j["id"] = this->counter++;
                 j["camera_id"] = channel_id;
                 j["alarm_id"] = alarm.get_alarm_id();
-                j["camera_discription"] = camera_description;
+                j["destination"] = robotDestination;
+                j["camera_description"] = camera_description;
                 j["detected_ids"] = detected_classes;
                 j["situation"] = alarm.get_alarm_sentence();
                 j["message"] = alarm_context[alarm.get_alarm_id()-1];

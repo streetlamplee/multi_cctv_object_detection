@@ -38,8 +38,8 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
 	//cv::resize(image, input, cv::Size(s, s), 0, 0, cv::INTER_AREA);
 
     //  이미지 전처리
-    int input_width = 224;
-    int input_height = 128;
+    int input_width = 384;
+    int input_height = 224;
     cv::Mat blob;
     cv::Size input_size(input_width, input_height);
     // cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);

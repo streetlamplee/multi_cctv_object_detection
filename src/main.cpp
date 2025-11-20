@@ -57,6 +57,7 @@ struct CameraChannel {
     int CameraChannelID;
     int channel_number;
     std::string channel_camera_description;
+    std::string robotDestination;
     CCTV* cctv_instance = nullptr;
     // ThreadSafeQueue<cv::Mat> raw_frame_queue{g_queueMaxSize};               // 0908 : not used
     // ThreadSafeQueue<cv::Mat> inference_frame_queue{g_queueMaxSize};         // 0908 : not used
@@ -96,6 +97,7 @@ int main(int argc, char* argv[]) {
     // read_conf(config_path, g_alarms); // 1106 hj modbus 적용
     // read_ini(ini_path, g_ini);
     g_alarm_manager.load_alarms_from_file(config_path); // 1106 hj modbus 적용
+    g_alarm_manager.set_cooltime(std::stoi(ini_reader->Get("Alarm Context", "AlarmCooltime", "180")));
 
     log_handler.load();
 
@@ -147,6 +149,7 @@ int main(int argc, char* argv[]) {
         channels[i-1]->channel_number = std::stoi(ini_reader->Get("CCTV Connection", key, "101"));
         channels[i-1]->CameraChannelID = i;
         channels[i-1]->channel_camera_description = ini_reader->Get("Camera Description", "Camera" + std::to_string(i), "Unknown");
+        channels[i-1]->robotDestination = ini_reader->Get("Robot Destination", "Camera" + std::to_string(i), "Unknown");
     }
     // channels[0]->connection_url = "/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=704&videoResolutionHeight=480";
     // channels[1]->connection_url = ""; 
@@ -319,7 +322,8 @@ void routine(CameraChannel* channel, std::string net_path){
         // 1119 hj mqtt 적용
         channel->alarm = g_alarm_manager.process_channel_alarms(channel->CameraChannelID,
                                                                 channel->detected_class,
-                                                                channel->channel_camera_description);
+                                                                channel->channel_camera_description,
+                                                                channel->robotDestination);
         // int status_reg = g_alarm_manager.get_modbus_alarm_status_reg(channel->CameraChannelID);
         // if (status_reg != -1) {
         //     channel->alarm = modbus_handler_get_ireg(status_reg);
