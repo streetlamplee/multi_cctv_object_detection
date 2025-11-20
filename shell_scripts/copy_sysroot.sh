@@ -64,7 +64,7 @@ export LD_LIBRARY_PATH=$(pwd)/lib
 
 # 3. 실행 파일 실행
 echo "Starting app with LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
-./app
+sudo nohup ./app &
 EOF
 
 # 9. 🔑 run.sh에 실행 권한 부여
