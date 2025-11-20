@@ -15,30 +15,35 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
         "perch on bed", 
         "staff"
     };
-    // image padding
-    int s = 224;
-    cv::Mat input(s,s, CV_8UC3, cv::Scalar(114,114,114));
-    cv::Mat resized_image;
-    float r_w = s / (float)image.cols;
-    float r_h = s / (float)image.rows;
-    float r = std::min(r_w, r_h);
-    int new_width = (int)(image.cols * r);
-    int new_height = (int)(image.rows * r);
-    cv::resize(image, resized_image, cv::Size(new_width, new_height), 0, 0, cv::INTER_AREA);
-    
-    int top_pad = 0;
-    int left_pad = (s - new_width) / 2;
 
-    resized_image.copyTo(input(cv::Rect(left_pad, top_pad, new_width, new_height)));
+    // 1120 hj letterbox 처리를 하지 않고 직사각형으로 추론하도록 설정
+    // image padding
+    // int s = 224;
+    // cv::Mat input(s,s, CV_8UC3, cv::Scalar(114,114,114));
+    // cv::Mat resized_image;
+    // float r_w = s / (float)image.cols;
+    // float r_h = s / (float)image.rows;
+    // float r = std::min(r_w, r_h);
+    // int new_width = (int)(image.cols * r);
+    // int new_height = (int)(image.rows * r);
+    // cv::resize(image, resized_image, cv::Size(new_width, new_height), 0, 0, cv::INTER_AREA);
+    
+    // int top_pad = 0;
+    // int left_pad = (s - new_width) / 2;
+
+    // resized_image.copyTo(input(cv::Rect(left_pad, top_pad, new_width, new_height)));
 
 	// 0917 not letterboxing the input image, just resize
 	//cv::Mat input;
 	//cv::resize(image, input, cv::Size(s, s), 0, 0, cv::INTER_AREA);
 
     //  이미지 전처리
+    int input_width = 224;
+    int input_height = 128;
     cv::Mat blob;
-    cv::Size input_size(s, s);
-    cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
+    cv::Size input_size(input_height, input_width);
+    // cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
+    cv::dnn::blobFromImage(image, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
     net.setInput(blob);
 
     //  추론 수행
@@ -84,14 +89,14 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
             float w = data[2];
             float h = data[3];
 
-            int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
-            int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
-            // int left = static_cast<int>((x - 0.5 * w));
-            // int top = static_cast<int>((y - 0.5 * h));
-            int width = static_cast<int>(w / r);
-            int height = static_cast<int>(h / r);
-            // int width = static_cast<int>(w);
-            // int height = static_cast<int>(h);
+            // int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
+            // int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
+            int left = static_cast<int>((x - 0.5 * w));
+            int top = static_cast<int>((y - 0.5 * h));
+            // int width = static_cast<int>(w / r);
+            // int height = static_cast<int>(h / r);
+            int width = static_cast<int>(w);
+            int height = static_cast<int>(h);
 
             boxes.push_back(cv::Rect(left, top, width, height));
         }
