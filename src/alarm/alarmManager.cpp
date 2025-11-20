@@ -23,7 +23,7 @@ bool AlarmManager::is_on_cooldown(int channel_id) {
     if (channel_cooldowns.count(channel_id)) {
         auto now = std::chrono::steady_clock::now();
         auto cooldown_start = channel_cooldowns.at(channel_id);
-        auto cooldown_duration = std::chrono::seconds(60); // 10초 쿨다운
+        auto cooldown_duration = std::chrono::minutes(3); // 10초 쿨다운
         if (now - cooldown_start < cooldown_duration) {
             return true; // 쿨다운 상태
         }
@@ -84,8 +84,8 @@ int AlarmManager::process_channel_alarms(int channel_id, const std::vector<int>&
 
                 MqttManager::getInstance().publish("CCTV/Alarm", payload);
 
-                std::string log_msg = "ALARM on channel " + std::to_string(channel_id) + ": " + alarm.get_alarm_sentence();
-                log_handler.push(Log::Level::ALARM, log_msg);
+                std::string log_msg = alarm.get_alarm_sentence();
+                log_handler.push(Log::Level::ALARM, log_msg, channel_id);
                 std::cout << "WARNING: " << log_msg << std::endl;
 
                 start_cooldown(channel_id);

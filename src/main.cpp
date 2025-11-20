@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
     // modbus_handler_start();
     // printf("Modbus Handler Started!\n");
 
-    log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행");
+    log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행", 0);
     //~ channels[0]->routine_thread = std::thread(routine, channels[0].get(), onnx_path);
     for (auto& channel : channels) {
 		channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
@@ -200,13 +200,13 @@ int main(int argc, char* argv[]) {
 
     
     std::cout << "[Main] Server thread 종료 완료. semaphore unlink 시도..." << std::endl;
-    log_handler.push(Log::Level::INFO, "모든 thread 종료 완료. semaphore unlink 시작");
+    log_handler.push(Log::Level::INFO, "모든 thread 종료 완료. semaphore unlink 시작", 0);
     sem_close(g_sem_image);
     sem_unlink(get_image_sem_name);
     sem_close(g_sem_inference);
     sem_unlink(infer_sem_name);
     std::cout << "[Main] semaphore unlink 완료. 프로그램 종료" << std::endl;
-    log_handler.push(Log::Level::INFO, "semaphore unlink 종료. 프로그램 종료.");
+    log_handler.push(Log::Level::INFO, "semaphore unlink 종료. 프로그램 종료.", 0);
     return 0;
 }
 
@@ -507,8 +507,8 @@ void routine(CameraChannel* channel, std::string net_path){
 void signal_handler(int signum) {
     std::cout << "[Main] 종료 신호 수신... " << std::endl;
     std::cout << "[Main] 이미 실행된 thread의 종료까지 대기..." << std::endl;
-    log_handler.push(Log::Level::INFO, "종료 신호 수신...");
-    log_handler.push(Log::Level::INFO, "이미 실행된 thread의 종료까지 대기...");
+    log_handler.push(Log::Level::INFO, "종료 신호 수신...", 0);
+    log_handler.push(Log::Level::INFO, "이미 실행된 thread의 종료까지 대기...", 0);
     // fs.server_stop(log_handler);
     g_running = false;
     // std::cerr<< "신호 " << signum << " 수신. semaphore 제거중 ..." << std::endl;

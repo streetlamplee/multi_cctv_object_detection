@@ -45,19 +45,22 @@ inline void Log::push(Level level, std::string message, int thread_num) {
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
     ss << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X") << " | ";
-    if (thread_num != -1) {
-        ss << "Thread " << std::setw(2) << thread_num << " | ";
+    if (thread_num == 0) {
+        ss << "   Main  " << " | ";
+    }
+    else if (thread_num != -1) {
+        ss  << "Thread " << std::right << std::setfill('0') << std::setw(2) << std::to_string(thread_num) << std::setfill(' ') << " | ";
     }
 
     std::string prefix = ss.str();
     switch (level){
-        case Level::INFO:       prefix += " INFO   ]";     break;
-        case Level::WARNING:    prefix += " WARNING]";  break;
-        case Level::ERROR:      prefix += " ERROR  ]";    break;
-        case Level::ALARM:      prefix += " ALARM  ]";    break;
-        case Level::SIZE:       prefix += "";           break;
+        case Level::INFO:       prefix += "   INFO ]";     break;
+        case Level::WARNING:    prefix += "WARNING ]";     break;
+        case Level::ERROR:      prefix += "  ERROR ]";     break;
+        case Level::ALARM:      prefix += "  ALARM ]";     break;
+        case Level::SIZE:       prefix += "";              break;
     }
-    prefix.resize(50, ' ');
+    prefix.resize(45, ' ');
     prefix += " | ";
     std::lock_guard<std::mutex> lock(Log_lock);
     this->lastNlines.push_back(prefix + message);

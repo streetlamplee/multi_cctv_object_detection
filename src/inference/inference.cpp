@@ -41,7 +41,7 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     int input_width = 224;
     int input_height = 128;
     cv::Mat blob;
-    cv::Size input_size(input_height, input_width);
+    cv::Size input_size(input_width, input_height);
     // cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
     cv::dnn::blobFromImage(image, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
     net.setInput(blob);
@@ -89,14 +89,14 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
             float w = data[2];
             float h = data[3];
 
-            // int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
-            // int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
-            int left = static_cast<int>((x - 0.5 * w));
-            int top = static_cast<int>((y - 0.5 * h));
-            // int width = static_cast<int>(w / r);
-            // int height = static_cast<int>(h / r);
-            int width = static_cast<int>(w);
-            int height = static_cast<int>(h);
+            // 원본 이미지 크기에 맞게 좌표 스케일링
+            float x_scale = image.cols / (float)input_width;
+            float y_scale = image.rows / (float)input_height;
+
+            int left = static_cast<int>((x - 0.5f * w) * x_scale);
+            int top = static_cast<int>((y - 0.5f * h) * y_scale);
+            int width = static_cast<int>(w * x_scale);
+            int height = static_cast<int>(h * y_scale);
 
             boxes.push_back(cv::Rect(left, top, width, height));
         }
