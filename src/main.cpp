@@ -381,7 +381,7 @@ void routine(CameraChannel* channel, std::string net_path){
         
         // 추론 후, 그림 그리기
         cv::Scalar color_anchor;
-        cv::Scalar color_boundary;
+        // cv::Scalar color_boundary;
         
         // 2. Lock the canvas and draw everything
         
@@ -407,7 +407,7 @@ void routine(CameraChannel* channel, std::string net_path){
         // Draw the latest bounding boxes to its ROI, applying the class filter
         // alarm 테두리 빨간 색 처리 코드  
         cv::Mat frame_save = frame.clone(); 
-        cv::rectangle(sub_frame, cv::Rect(0,0,width, height), color_boundary, 3);
+        // cv::rectangle(sub_frame, cv::Rect(0,0,width, height), color_boundary, 3);
         
         for (const auto& det : results) {
             cv::Rect box = det.box;
