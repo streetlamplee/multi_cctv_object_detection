@@ -23,6 +23,10 @@ void Alarm::set_alarm_id(int r_lv){
 void Alarm::set_alarm_sentence(std::string s){
     this->alarm_sentence = s;
 }
+void Alarm::set_alarm_context(std::unordered_map<int, std::string> context) {
+    this->alarm_context = context;
+}
+
 // 1106 hj modbus 적용
 void Alarm::set_id(int id){
     this->id = id;

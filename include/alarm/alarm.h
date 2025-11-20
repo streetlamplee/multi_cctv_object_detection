@@ -20,6 +20,7 @@ public:
     void set_condition(std::string cond);
     void set_alarm_id(int r_lv);
     void set_alarm_sentence(std::string s);
+    void set_alarm_context(std::unordered_map<int, std::string> context);
     void set_id(int id); // 1106 hj modbus 적용
 
     int get_target_channel();
@@ -28,6 +29,8 @@ public:
     int get_alarm_id();
     std::string get_alarm_sentence();
     int get_id(); // 1106 hj modbus 적용
+
+    std::unordered_map<int, std::string> alarm_context;
 
 private:
     int id; // 1106 hj modbus 적용

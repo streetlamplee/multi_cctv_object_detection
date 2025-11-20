@@ -9,6 +9,7 @@ find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
+find_package(nlohmann_json REQUIRED)
 pkg_check_modules(MODBUS REQUIRED libmodbus)
 
 add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
@@ -24,10 +25,12 @@ add_executable(app
     src/config/Handler.cpp
     src/config/configHandler.cpp
     # src/WindowHandler.cpp
-    src/config/iniHandler.cpp
+    # src/config/iniHandler.cpp
     src/alarm/alarmManager.cpp
     src/_modbus/modbus_handler.c
     src/config/ini.c
+    src/config/INIReader.cpp
+    src/mqttManager/mqttManager.cpp
 )
 
 target_include_directories(app PRIVATE
@@ -45,4 +48,5 @@ target_link_libraries(app PRIVATE
     ${MODBUS_STATIC_LIBRARIES}
     Threads::Threads
     PahoMqttCpp::paho-mqttpp3
+    nlohmann_json::nlohmann_json
 )

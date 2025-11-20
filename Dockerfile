@@ -18,6 +18,7 @@ RUN apt update && apt install -y \
     libgfortran5 \
     libssl-dev \
     libmodbus-dev \
+    nlohmann-json3-dev \
     mosquitto mosquitto-clients \
     libpaho-mqttpp-dev libpaho-mqtt-dev \
     && apt clean \

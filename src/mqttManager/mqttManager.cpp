@@ -6,7 +6,7 @@ MqttManager::~MqttManager() {
     delete client_;
 }
 
-void MqttManager::connect(const std::string& address, const std::string& clientID) {
+void MqttManager::connect(const std::string& address, const std::string& clientID, const std::string& userID, const std::string& password) {
     if (client_) {
         std::cout << "[MQTT] Already connected" << std::endl;
         return;
@@ -17,6 +17,8 @@ void MqttManager::connect(const std::string& address, const std::string& clientI
         mqtt::connect_options connOpts;
         connOpts.set_keep_alive_interval(20);
         connOpts.set_clean_session(true);
+        connOpts.set_user_name(userID);
+        connOpts.set_password(password);
 
         std::cout << "[MQTT] 브로커 연결 시도" << std::endl;
         client_->connect(connOpts)->wait();
