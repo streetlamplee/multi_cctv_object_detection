@@ -244,7 +244,7 @@ void routine(CameraChannel* channel, std::string net_path){
     cv::Mat sub_frame;
     std::string id = ini_reader->Get("CCTV Connection", "id", "admin");
     std::string password = ini_reader->Get("CCTV Connection", "password", "q1w2e3r4");
-    std::string ip = ini_reader->Get("CCTV Connection", ip, "192.168.1.100");
+    std::string ip = ini_reader->Get("CCTV Connection", "ip", "192.168.1.100");
     int port = std::stoi(ini_reader->Get("CCTV Connection", "port", "80"));
     int width = std::stoi(ini_reader->Get("Window Configuration", "window_width", "480"));
     int height = std::stoi(ini_reader->Get("Window Configuration", "window_height", "270"));
