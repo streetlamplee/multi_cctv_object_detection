@@ -4,11 +4,27 @@
 #include "mqttManager/mqttManager.h"
 #include <iostream>
 #include "time/timestamp.h"
+// #include <random>   //for create_id
+#include <cstdint>  //for create_id
+#include <fstream>
 
 using json = nlohmann::json;
+// std::random_device rd;
+// std::mt19937 gen(rd());
+// std::uniform_int_distribution<uint32_t> distrib(0, UINT32_MAX);
+
+// uint32_t create_id() {
+//     return distrib(gen);
+// }
 
 // 1106 hj modbus 적용
-AlarmManager::AlarmManager() {}
+AlarmManager::AlarmManager() {
+    std::ifstream file("./resource/id.bin", std::ios::binary);
+    if (file.is_open()){
+        file.read(reinterpret_cast<char*>(&this->id), sizeof(this->id));
+        file.close();
+    }
+}
 
 // 1106 hj modbus 적용
 AlarmManager::~AlarmManager() {}
@@ -27,7 +43,7 @@ bool AlarmManager::is_on_cooldown(int channel_id) {
     if (channel_cooldowns.count(channel_id)) {
         auto now = std::chrono::steady_clock::now();
         auto cooldown_start = channel_cooldowns.at(channel_id);
-        auto cooldown_duration = std::chrono::minutes(3); // 10초 쿨다운
+        auto cooldown_duration = std::chrono::minutes(3); // 180초 쿨다운
         if (now - cooldown_start < cooldown_duration) {
             return true; // 쿨다운 상태
         }
@@ -76,9 +92,16 @@ int AlarmManager::process_channel_alarms(int channel_id,
                 // // Modbus에 알람 정보 전송
                 // modbus_handler_set_ireg(status_reg, 1); // status = true
                 // modbus_handler_set_ireg(id_reg, alarm.get_alarm_id());
-                
+                // uint32_t new_id;
+                // while (true) {
+                //     new_id = create_id();
+                //     if (new_id != this->id) {
+                //         break;
+                //     }
+                // }
+                // this->id = ;
                 json j;
-                j["id"] = this->counter++;
+                j["id"] = this->id;
                 j["camera_id"] = channel_id;
                 j["alarm_id"] = alarm.get_alarm_id();
                 j["destination"] = robotDestination;
@@ -91,6 +114,18 @@ int AlarmManager::process_channel_alarms(int channel_id,
                 std::string payload = j.dump();
 
                 MqttManager::getInstance().publish("CCTV/Alarm", payload);
+
+                std::ofstream binfile("./resource/id.bin", std::ios::binary);
+                if (binfile.is_open()) {
+                    binfile.write(reinterpret_cast<const char*>(&this->id), sizeof(this->id));
+                    binfile.close();
+                }
+
+                this->id++;
+
+                if (this->id == UINT32_MAX) {
+                    this->id = 0;
+                }
 
                 std::string log_msg = alarm.get_alarm_sentence();
                 log_handler.push(Log::Level::ALARM, log_msg, channel_id);

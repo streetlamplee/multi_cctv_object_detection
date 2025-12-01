@@ -36,5 +36,5 @@ private:
     std::unordered_map<int, std::chrono::steady_clock::time_point> channel_cooldowns;
     std::mutex cooldown_mutex;
     int cooltime = 180;
-    int counter = 0;
+    uint32_t id = 0;
 };
