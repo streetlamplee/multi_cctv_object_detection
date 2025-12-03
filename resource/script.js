@@ -51,12 +51,38 @@ function updateGrid() {
     for (let i = 0; i < totalCells; i++) {
         const item = document.createElement('div');
         item.classList.add('gallery-item');
+        const url = imageUrls[i] ? imageUrls[i].trim() : '';
 
-        if (imageUrls[i]) {
-            const img = document.createElement('img');
-            img.src = imageUrls[i];
-            img.alt = `이미지 ${i + 1}`;
-            item.appendChild(img);
+        if (url) {
+            // [핵심 변경] RTSP 주소인지 감지
+            if (url.startsWith('rtsp://')) {
+                item.classList.add('stream-mode');
+
+                // iframe 생성
+                const iframe = document.createElement('iframe');
+                
+                // Nginx 프록시 경로(/stream/)를 통해 go2rtc 플레이어 호출
+                // src 파라미터에 RTSP 주소를 넣고, mode를 webrtc로 설정
+                iframe.src = `/stream/stream.html?src=${encodeURIComponent(url)}&mode=webrtc`;
+                
+                // 스타일: 꽉 차게, 테두리 없이
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+                iframe.style.border = 'none';
+                
+                // 중요: 클릭 이벤트를 상위 div가 받도록 설정 (설정 모달 띄우기 위해)
+                iframe.style.pointerEvents = 'none'; 
+                
+                item.appendChild(iframe);
+                item.dataset.type = 'stream'; // 스트림 타입 표시
+            } else {
+                // 기존 이미지 처리 로직
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = `이미지 ${i + 1}`;
+                item.appendChild(img);
+                item.dataset.type = 'image';
+            }
         } else {
             item.classList.add('empty');
         }
@@ -198,12 +224,14 @@ function createNotification(message) {
 // 이미지 실시간 업데이트 로직
 setInterval(() => {
     const timestamp = new Date().getTime();
-    const allImages = document.querySelectorAll('.gallery-item:not(.empty) img');
+    // .gallery-item 내부의 순수 'img' 태그만 선택
+    const allImages = document.querySelectorAll('.gallery-item:not(.empty) > img');
+    
     allImages.forEach(img => {
         let originalSrc = img.src.split('?')[0];
         img.src = `${originalSrc}?t=${timestamp}`;
     });
-}, 200);
+}, 200); // 200ms 주기는 이미지에만 적용됨
 
 // 로그 업데이트 로직
 setInterval(() => {

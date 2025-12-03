@@ -32,6 +32,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             cursor: pointer;
             transition: all 0.3s ease-in-out;
+            position: relative;
         }
 
         .gallery-item img {
@@ -49,6 +50,26 @@
             .gallery-container {
                 grid-template-columns: repeat(2, 1fr) !important; /* Mobile view override */
             }
+        }
+
+        .gallery-item.stream-mode {
+            aspect-ratio: 4 / 3; /* 가로 16 : 세로 9 비율 고정 (CCTV 표준) */
+            height: auto;         /* 높이는 비율에 맞춰 자동 조절 */
+            background-color: black; /* 로딩 중일 때 검은색 배경 */
+        }
+
+        .stream-iframe {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            
+            /* [핵심] 100%가 아니라 104%로 설정하여 8px 여백을 강제로 밖으로 밀어냄 */
+            width: 104%; 
+            height: 104%;
+            
+            transform: translate(-50%, -50%); /* 중앙 정렬 */
+            border: none;
+            pointer-events: none;
         }
 
         .text-box-container {
@@ -295,18 +316,18 @@
             <input type="number" id="rowsInput" value="3" min="1">
             
             <label for="imageUrls" style="width: 100%;">이미지 URL (한 줄에 하나씩):</label>
-            <textarea id="imageUrls">./output/01.jpg
-./output/02.jpg
-./output/03.jpg
-./output/04.jpg
-./output/05.jpg
-./output/06.jpg
-./output/07.jpg
-./output/08.jpg
-./output/09.jpg
-./output/10.jpg
-./output/11.jpg
-./output/12.jpg</textarea>
+            <textarea id="imageUrls">rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201
+rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201</textarea>
             
             <button id="updateGridBtn">그리드 업데이트</button>
         </div>

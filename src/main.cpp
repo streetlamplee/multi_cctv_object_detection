@@ -444,6 +444,61 @@ void routine(CameraChannel* channel, std::string net_path){
             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
             cv::putText(sub_frame, label, cv::Point(box.x, box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
         }
+
+        std::string output_path = "./resource/output";
+        std::filesystem::path output_path_fs = "./resource/output";
+        std::filesystem::create_directories(output_path_fs);
+
+        std::stringstream ss_save_path;
+        ss_save_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".txt";
+        std::ofstream net_result(ss_save_path.str());
+
+        if (net_result.is_open()) {
+            // 소수점 6자리까지 고정하여 정밀도 확보 (0.123456 형태)
+            net_result << std::fixed << std::setprecision(6);
+
+            for (const auto& det : results) {
+                cv::Rect box = det.box;
+
+                // 1. sub_frame과 frame 간의 스케일 비율 계산
+                // (원본 크기 / 추론 크기)
+                double scale_x = (double)frame.cols / sub_frame.cols;
+                double scale_y = (double)frame.rows / sub_frame.rows;
+
+                // 2. 바운딩 박스 좌표를 원본 frame 스케일로 변환
+                double scaled_box_x = box.x * scale_x;
+                double scaled_box_y = box.y * scale_y;
+                double scaled_box_width = box.width * scale_x;
+                double scaled_box_height = box.height * scale_y;
+
+                // 3. YOLO 포맷 계산 (Center X, Center Y, Width, Height) - 0~1 정규화
+                double center_x = (scaled_box_x + scaled_box_width / 2.0) / frame.cols;
+                double center_y = (scaled_box_y + scaled_box_height / 2.0) / frame.rows;
+                double normalized_width = scaled_box_width / frame.cols;
+                double normalized_height = scaled_box_height / frame.rows;
+                
+                // 좌표가 0~1 범위를 벗어나지 않도록 클램핑 (안전장치)
+                center_x = std::max(0.0, std::min(1.0, center_x));
+                center_y = std::max(0.0, std::min(1.0, center_y));
+                normalized_width = std::max(0.0, std::min(1.0, normalized_width));
+                normalized_height = std::max(0.0, std::min(1.0, normalized_height));
+
+                // 4. 텍스트 파일에 저장
+                // Format: <class_id> <x_center> <y_center> <width> <height>
+                net_result << det.classID << " " 
+                        << center_x << " " 
+                        << center_y << " " 
+                        << normalized_width << " " 
+                        << normalized_height
+                        << std::endl;
+            }
+            
+            net_result.close();
+            std::cout << "Saved detection results to " << save_path << std::endl;
+        } else {
+            std::cerr << "Error: Could not open file for writing." << std::endl;
+        }
+
         
 		//~ end = std::chrono::high_resolution_clock::now();
 		//~ if (test) {
@@ -453,9 +508,9 @@ void routine(CameraChannel* channel, std::string net_path){
 		//~ start = std::chrono::high_resolution_clock::now();
         
         std::stringstream ss_output_path;
-        std::string output_path = "./resource/output";
-        std::filesystem::path output_path_fs = "./resource/output";
-        std::filesystem::create_directories(output_path_fs);
+        
+        // std::filesystem::path output_path_fs = "./resource/output";
+        // std::filesystem::create_directories(output_path_fs);
         ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".jpg";
         cv::imwrite(ss_output_path.str(), sub_frame);
         
