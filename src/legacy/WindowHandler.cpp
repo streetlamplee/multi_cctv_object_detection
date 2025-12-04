@@ -1,4 +1,4 @@
-#include "Windowhandler.h"
+#include "legacy/Windowhandler.h"
 
 bool paint(const std::unordered_map<std::string, std::string> inifile, cv::Mat& canvas) {
     if (inifile.empty()) {

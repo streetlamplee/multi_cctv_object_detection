@@ -1,11 +1,11 @@
-#include "alarm.h"
+#include "alarm/alarm.h"
 
 Alarm::Alarm() {}
 Alarm::Alarm(int target_channel, std::string des, std::string cond, int r_lv) {
     this->target_channel = target_channel;
     this->name = des;
     this->condition = cond;
-    this->risk_level = r_lv;
+    this->alarm_id = r_lv;
 }
 Alarm::~Alarm() {}
 void Alarm::set_target_channel(int target_channel){
@@ -17,12 +17,21 @@ void Alarm::set_name(std::string des){
 void Alarm::set_condition(std::string cond){
     this->condition = cond;
 }
-void Alarm::set_risk_level(int r_lv){
-    this->risk_level = r_lv;
+void Alarm::set_alarm_id(int r_lv){
+    this->alarm_id = r_lv;
 }
 void Alarm::set_alarm_sentence(std::string s){
     this->alarm_sentence = s;
 }
+void Alarm::set_alarm_context(std::unordered_map<int, std::string> context) {
+    this->alarm_context = context;
+}
+
+// 1106 hj modbus 적용
+void Alarm::set_id(int id){
+    this->id = id;
+}
+
 int Alarm::get_target_channel(){
     return this->target_channel;
 }
@@ -32,11 +41,15 @@ std::string Alarm::get_name(){
 std::string Alarm::get_condition(){
     return this->condition;
 }
-int Alarm::get_risk_level(){
-    return this->risk_level;
+int Alarm::get_alarm_id(){
+    return this->alarm_id;
 }
 std::string Alarm::get_alarm_sentence(){
     return this->alarm_sentence;
+}
+// 1106 hj modbus 적용
+int Alarm::get_id(){
+    return this->id;
 }
 
 bool define_alarm (std::string condition, const std::vector<int>& detectedClass) {

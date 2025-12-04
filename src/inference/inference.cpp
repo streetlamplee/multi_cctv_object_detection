@@ -1,5 +1,5 @@
-#include "inference.h"
-
+#include "inference/inference.h"
+    
 std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     // 클래스 이름 정의 (YOLOv8의 80개 COCO 클래스)
     std::vector<std::string> class_names = {
@@ -15,30 +15,35 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
         "perch on bed", 
         "staff"
     };
-    // image padding
-    int s = 224;
-    cv::Mat input(s,s, CV_8UC3, cv::Scalar(0,0,0));
-    cv::Mat resized_image;
-    float r_w = s / (float)image.cols;
-    float r_h = s / (float)image.rows;
-    float r = std::min(r_w, r_h);
-    int new_width = (int)(image.cols * r);
-    int new_height = (int)(image.rows * r);
-    cv::resize(image, resized_image, cv::Size(new_width, new_height), 0, 0, cv::INTER_AREA);
-    
-    int top_pad = (s - new_height) / 2;
-    int left_pad = (s - new_width) / 2;
 
-    resized_image.copyTo(input(cv::Rect(left_pad, top_pad, new_width, new_height)));
+    // 1120 hj letterbox 처리를 하지 않고 직사각형으로 추론하도록 설정
+    // image padding
+    // int s = 224;
+    // cv::Mat input(s,s, CV_8UC3, cv::Scalar(114,114,114));
+    // cv::Mat resized_image;
+    // float r_w = s / (float)image.cols;
+    // float r_h = s / (float)image.rows;
+    // float r = std::min(r_w, r_h);
+    // int new_width = (int)(image.cols * r);
+    // int new_height = (int)(image.rows * r);
+    // cv::resize(image, resized_image, cv::Size(new_width, new_height), 0, 0, cv::INTER_AREA);
+    
+    // int top_pad = 0;
+    // int left_pad = (s - new_width) / 2;
+
+    // resized_image.copyTo(input(cv::Rect(left_pad, top_pad, new_width, new_height)));
 
 	// 0917 not letterboxing the input image, just resize
 	//cv::Mat input;
 	//cv::resize(image, input, cv::Size(s, s), 0, 0, cv::INTER_AREA);
 
     //  이미지 전처리
+    int input_width = 384;
+    int input_height = 224;
     cv::Mat blob;
-    cv::Size input_size(s, s);
-    cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
+    cv::Size input_size(input_width, input_height);
+    // cv::dnn::blobFromImage(input, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
+    cv::dnn::blobFromImage(image, blob, 1.0/255.0, input_size, cv::Scalar(), true, false, CV_32F);
     net.setInput(blob);
 
     //  추론 수행
@@ -47,8 +52,8 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
     net.forward(outputs, output_names);
 
     //  결과 처리
-    float confidence_threshold = 0.7f;
-    float nms_threshold = 0.1f;
+    float confidence_threshold = 0.4f;
+    float nms_threshold = 0.5f;
 
     std::vector<int> class_ids;
     std::vector<float> confidences;
@@ -84,14 +89,14 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
             float w = data[2];
             float h = data[3];
 
-            int left = static_cast<int>((x - 0.5 * w - left_pad) / r);
-            int top = static_cast<int>((y - 0.5 * h - top_pad) / r);
-            // int left = static_cast<int>((x - 0.5 * w));
-            // int top = static_cast<int>((y - 0.5 * h));
-            int width = static_cast<int>(w / r);
-            int height = static_cast<int>(h / r);
-            // int width = static_cast<int>(w);
-            // int height = static_cast<int>(h);
+            // 원본 이미지 크기에 맞게 좌표 스케일링
+            float x_scale = image.cols / (float)input_width;
+            float y_scale = image.rows / (float)input_height;
+
+            int left = static_cast<int>((x - 0.5f * w) * x_scale);
+            int top = static_cast<int>((y - 0.5f * h) * y_scale);
+            int width = static_cast<int>(w * x_scale);
+            int height = static_cast<int>(h * y_scale);
 
             boxes.push_back(cv::Rect(left, top, width, height));
         }

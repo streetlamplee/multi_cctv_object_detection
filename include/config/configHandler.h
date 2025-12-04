@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Handler.h"
-#include "alarm.h"
+#include "config/Handler.h"
+#include "alarm/alarm.h"
 #include <stack>
 
 

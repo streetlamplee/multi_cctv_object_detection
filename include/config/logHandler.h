@@ -4,7 +4,7 @@
 #include <sstream>      // for std::stringstream
 #include <iostream>     // for std::cout, std::cerr
 #include <deque>        // for std::deque
-// #include <mutex>        // for std::mutex
+#include <mutex>        // for std::mutex
 #include <semaphore.h>
 #include <iomanip>      // for std::put_time
 
@@ -24,8 +24,12 @@ class Log{
 
     }
     ~Log() {
-        if (!this->lastNlines.empty()) {
-            this->save();
+        try {
+            if (!this->lastNlines.empty()) {
+                this->save();
+            }
+        } catch (...) {
+            // Destructors should not throw. Suppress all exceptions.
         }
     }
 
@@ -36,24 +40,27 @@ class Log{
     void load();
 };
 
-void Log::push(Level level, std::string message, int thread_num) {
+inline void Log::push(Level level, std::string message, int thread_num) {
     auto now = std::chrono::system_clock::now();
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
     ss << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X") << " | ";
-    if (thread_num != -1) {
-        ss << "Thread " << std::setw(2) << thread_num << " | ";
+    if (thread_num == 0) {
+        ss << "   Main  " << " | ";
+    }
+    else if (thread_num != -1) {
+        ss  << "Thread " << std::right << std::setfill('0') << std::setw(2) << std::to_string(thread_num) << std::setfill(' ') << " | ";
     }
 
     std::string prefix = ss.str();
     switch (level){
-        case Level::INFO:       prefix += " INFO]";     break;
-        case Level::WARNING:    prefix += " WARNING]";  break;
-        case Level::ERROR:      prefix += " ERROR]";    break;
-        case Level::ALARM:      prefix += " ALARM]";    break;
-        case Level::SIZE:       prefix += "";           break;
+        case Level::INFO:       prefix += "   INFO ]";     break;
+        case Level::WARNING:    prefix += "WARNING ]";     break;
+        case Level::ERROR:      prefix += "  ERROR ]";     break;
+        case Level::ALARM:      prefix += "  ALARM ]";     break;
+        case Level::SIZE:       prefix += "";              break;
     }
-    prefix.resize(50, ' ');
+    prefix.resize(45, ' ');
     prefix += " | ";
     std::lock_guard<std::mutex> lock(Log_lock);
     this->lastNlines.push_back(prefix + message);
@@ -62,11 +69,11 @@ void Log::push(Level level, std::string message, int thread_num) {
     }
 }
 
-std::string Log::getFilename() {
+inline std::string Log::getFilename() {
     return this->filename;
 }
 
-void Log::load() {
+inline void Log::load() {
     if (this->filename.empty()) {
         std::cerr << "ERR: No Filename" << std::endl;
     }
@@ -81,7 +88,7 @@ void Log::load() {
     }
 }
 
-void Log::save() {
+inline void Log::save() {
     if (this->filename.empty()) {
         std::cerr << "ERR: No Filename" << std::endl;
     }

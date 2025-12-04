@@ -1,4 +1,4 @@
-#include "cctv.h"
+#include "cctv/cctv.h"
 
 CCTV::CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat>* stack) : rtspURL(rtspURL), image_stack(stack) {
 

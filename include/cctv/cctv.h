@@ -3,8 +3,8 @@
 #include <string>
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include "thread_safe_stack.h"
-#include "getFrame.h"
+#include "thread_safe/thread_safe_stack.h"
+#include "cctv/getFrame.h"
 
 class CCTV {
     private:
