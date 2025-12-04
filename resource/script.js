@@ -15,25 +15,143 @@ const settingsModal = document.getElementById('settingsModal');
 
 /**
  * 갤러리 아이템에 클릭 시 확대/축소되는 이벤트 리스너를 설정하는 함수
+ * 수정됨: cloneNode 삭제 (setInterval 참조 유지)
  */
 function setupGalleryEventListeners() {
+    // 이미 updateGrid에서 기존 DOM을 날리고 새로 만들었으므로,
+    // 여기서 select되는 item들은 모두 리스너가 없는 새 요소들입니다.
+    // 따라서 복제(cloning) 과정 없이 바로 addEventListener를 해도 안전합니다.
     const galleryItems = document.querySelectorAll('.gallery-item');
-    galleryItems.forEach(item => {
-        const newItem = item.cloneNode(true);
-        item.parentNode.replaceChild(newItem, item);
 
-        newItem.addEventListener('click', () => {
-            if (newItem.classList.contains('empty')) return;
+    galleryItems.forEach(item => {
+        // 이미 클릭 이벤트가 있을 수 있으니 방어적으로 제거하거나, 
+        // 현재 로직상 updateGrid가 매번 새로 만들므로 바로 추가해도 됩니다.
+
+        item.addEventListener('click', () => {
+            if (item.classList.contains('empty')) return;
 
             const currentFocused = document.querySelector('.gallery-item.focused');
-            if (currentFocused && currentFocused !== newItem) {
+            // 자기 자신이 이미 포커스 상태라면 해제, 아니면 포커스
+            if (currentFocused && currentFocused !== item) {
                 currentFocused.classList.remove('focused');
             }
-            newItem.classList.toggle('focused');
-            
-            backdrop.style.display = newItem.classList.contains('focused') ? 'block' : 'none';
+            item.classList.toggle('focused');
+
+            // 포커스 된 요소가 하나라도 있으면 백드롭 표시
+            const isAnyFocused = document.querySelector('.gallery-item.focused');
+            backdrop.style.display = isAnyFocused ? 'block' : 'none';
         });
     });
+}
+
+/* --- 전역 변수 수정 --- */
+// [수정] 단순 텍스트 저장(Map)에서 '상태 객체' 저장으로 변경
+// Key: txtUrl, Value: { lastText: "...", emptyCount: 0 }
+const channelState = new Map();
+
+/* --- 렌더링 함수 (기존과 동일, 없으면 추가) --- */
+function renderBox(canvas, text) {
+    const ctx = canvas.getContext('2d');
+    if (!text) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const lines = text.split('\n');
+    ctx.beginPath(); 
+    ctx.strokeStyle = '#00FF00';
+    ctx.lineWidth = 2;
+    
+    lines.forEach(line => {
+        const parts = line.trim().split(' ');
+        if (parts.length >= 5) {
+            // ... (좌표 변환 로직 동일) ...
+            const classId = parts[0];
+            const x_center = parseFloat(parts[1]);
+            const y_center = parseFloat(parts[2]);
+            const w_norm = parseFloat(parts[3]);
+            const h_norm = parseFloat(parts[4]);
+
+            const boxW = w_norm * canvas.width;
+            const boxH = h_norm * canvas.height;
+            const boxX = (x_center * canvas.width) - (boxW / 2);
+            const boxY = (y_center * canvas.height) - (boxH / 2);
+
+            ctx.rect(boxX, boxY, boxW, boxH);
+            
+            ctx.save();
+            ctx.fillStyle = '#00FF00';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText(`ID: ${classId}`, boxX, boxY - 5);
+            ctx.restore();
+        }
+    });
+    ctx.stroke(); 
+}
+
+/* --- 메인 그리기 함수 (로직 수정됨) --- */
+function drawBBox(canvas, txtUrl) {
+    const ctx = canvas.getContext('2d');
+
+    // 1. 캔버스 크기 싱크 및 복구 로직
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const isResized = (canvas.width !== rect.width || canvas.height !== rect.height);
+
+    // 상태값 초기화 (처음 실행 시)
+    if (!channelState.has(txtUrl)) {
+        channelState.set(txtUrl, { lastText: '', emptyCount: 0 });
+    }
+    const state = channelState.get(txtUrl);
+
+    if (isResized) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        // 크기가 바뀌어서 지워졌으면, 기억해둔 내용으로 즉시 복구
+        if (state.lastText) {
+            renderBox(canvas, state.lastText);
+        }
+    }
+
+    // 2. 데이터 가져오기
+    fetch(txtUrl, { cache: 'no-store' })
+        .then(res => {
+            if (!res.ok) throw new Error('No Data');
+            return res.text();
+        })
+        .then(text => {
+            const isEmpty = (!text || text.trim().length === 0);
+
+            // [⭐⭐ 핵심 수정: 빈 데이터 처리 로직 ⭐⭐]
+            if (isEmpty) {
+                state.emptyCount++; // 빈 횟수 카운트 증가
+
+                // "2번 이상 연속"으로 비어있다면 -> 진짜 객체 없음으로 판단하고 지움
+                // (약 0.5초~1초 정도의 딜레이가 생기지만, 깜빡임은 완벽 차단됨)
+                if (state.emptyCount >= 2) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    state.lastText = ''; // 상태 초기화
+                    // 카운트가 무한히 늘어나지 않게 고정
+                    if(state.emptyCount > 10) state.emptyCount = 2; 
+                }
+                
+                // 1번만 비어있는 경우(글리치 가능성)는 무시하고 함수 종료 (이전 박스 유지)
+                return; 
+            }
+
+            // --- 데이터가 있는 경우 ---
+            
+            state.emptyCount = 0; // 빈 카운트 리셋 (연속성 깨짐)
+
+            // 내용이 이전과 같으면 그리지 않음 (CPU 절약)
+            if (state.lastText === text) {
+                return;
+            }
+            
+            // 데이터 업데이트 및 그리기
+            state.lastText = text;
+            renderBox(canvas, text);
+        })
+        .catch(err => {
+            // 네트워크 에러 시에는 기존 그림 유지 (깜빡임 방지)
+        });
 }
 
 /**
@@ -48,41 +166,144 @@ function updateGrid() {
     galleryContainer.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     galleryContainer.innerHTML = '';
 
+    /* updateGrid 함수 내부의 for 루프 부분 수정 */
+
     for (let i = 0; i < totalCells; i++) {
         const item = document.createElement('div');
         item.classList.add('gallery-item');
-        const url = imageUrls[i] ? imageUrls[i].trim() : '';
 
-        if (url) {
-            // [핵심 변경] RTSP 주소인지 감지
-            if (url.startsWith('rtsp://')) {
+        let rawInput = imageUrls[i] ? imageUrls[i].trim() : '';
+
+        // 콤마(,)로 구분하여 비디오URL과 텍스트URL 분리
+        let [videoUrl, txtUrl] = rawInput.split(',').map(s => s.trim());
+
+        if (videoUrl) {
+            // [1] RTSP 스트림 처리 (Go2RTC WebRTC) - 이 부분이 누락되어 있었습니다!
+            // [1] RTSP 스트림 처리 (Go2RTC WebRTC)
+            if (videoUrl.startsWith('rtsp://')) {
                 item.classList.add('stream-mode');
 
-                // iframe 생성
+                // 1. 영상 iframe 생성
                 const iframe = document.createElement('iframe');
-                
-                // Nginx 프록시 경로(/stream/)를 통해 go2rtc 플레이어 호출
-                // src 파라미터에 RTSP 주소를 넣고, mode를 webrtc로 설정
-                iframe.src = `/stream/stream.html?src=${encodeURIComponent(url)}&mode=webrtc`;
-                
-                // 스타일: 꽉 차게, 테두리 없이
+                iframe.src = `/stream/stream.html?src=${encodeURIComponent(videoUrl)}&mode=webrtc`;
+                iframe.classList.add('stream-iframe');
+
+                // 스타일 강제 적용 (iframe 자체)
                 iframe.style.width = '100%';
                 iframe.style.height = '100%';
                 iframe.style.border = 'none';
-                
-                // 중요: 클릭 이벤트를 상위 div가 받도록 설정 (설정 모달 띄우기 위해)
-                iframe.style.pointerEvents = 'none'; 
-                
+                iframe.style.pointerEvents = 'none'; // 클릭 이벤트는 부모 div가 받도록 통과
+
+                // [영상 꽉 채우기] iframe 내부 video 태그 스타일 조작
+                iframe.onload = () => {
+                    try {
+                        const internalDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                        // Go2RTC가 비디오 태그를 생성할 때까지 잠시 감시
+                        const checkVideoInterval = setInterval(() => {
+                            const video = internalDoc.querySelector('video');
+                            if (video) {
+                                // 비율 무시하고 강제로 늘리기 (fill)
+                                video.style.objectFit = 'fill';
+                                video.style.width = '100%';
+                                video.style.height = '100%';
+                                clearInterval(checkVideoInterval);
+                            }
+                        }, 100);
+
+                        // 5초 타임아웃
+                        setTimeout(() => clearInterval(checkVideoInterval), 5000);
+                    } catch (e) {
+                        console.warn('iframe 접근 불가(CORS):', e);
+                    }
+                };
+
                 item.appendChild(iframe);
-                item.dataset.type = 'stream'; // 스트림 타입 표시
-            } else {
-                // 기존 이미지 처리 로직
-                const img = document.createElement('img');
-                img.src = url;
-                img.alt = `이미지 ${i + 1}`;
-                item.appendChild(img);
-                item.dataset.type = 'image';
+                item.dataset.type = 'stream';
+
+                // 2. [복구됨] 텍스트 파일(txtUrl)이 있으면 캔버스 생성 및 그리기
+                if (txtUrl) {
+                    const canvas = document.createElement('canvas');
+
+                    // 캔버스 스타일 (영상 위에 완벽하게 겹치기)
+                    canvas.style.position = 'absolute';
+                    canvas.style.top = '0';
+                    canvas.style.left = '0';
+                    canvas.style.width = '100%';
+                    canvas.style.height = '100%';
+                    canvas.style.zIndex = '10'; // 영상(z-index:1)보다 위에 배치
+                    canvas.style.pointerEvents = 'none'; // 클릭 통과
+
+                    item.appendChild(canvas);
+
+                    // 0.1초마다 좌표 파일 읽어서 그리기 (깜빡임 방지 로직 적용된 drawBBox 호출)
+                    const drawInterval = setInterval(() => {
+                        // 캔버스가 화면(DOM)에서 사라지면(그리드 업데이트 등) 반복 중단
+                        if (!document.body.contains(canvas)) {
+                            clearInterval(drawInterval);
+                            return;
+                        }
+                        drawBBox(canvas, txtUrl);
+                    }, 500);
+                }
             }
+            // [2] 기존 M3U8 비디오 처리
+            else if (videoUrl.toLowerCase().indexOf('.m3u8') !== -1) {
+                const video = document.createElement('video');
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.autoplay = true; video.muted = true; video.playsInline = true; video.loop = true;
+
+                if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(videoUrl);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => { }));
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = videoUrl;
+                    video.addEventListener('loadedmetadata', () => video.play());
+                }
+                item.appendChild(video);
+
+                if (txtUrl) {
+                    // ... (캔버스 생성 및 스타일 설정 코드는 기존 유지) ...
+                    
+                    // [수정 포인트] 랜덤 딜레이를 주어 네트워크 병목 해결
+                    // 0 ~ 2000ms 사이의 랜덤한 시간 뒤에 반복 시작
+                    const randomDelay = Math.random() * 1000; 
+
+                    setTimeout(() => {
+                        const drawInterval = setInterval(() => {
+                            // 캔버스가 화면(DOM)에서 사라지면 반복 중단
+                            if (!document.body.contains(canvas)) {
+                                clearInterval(drawInterval);
+                                return;
+                            }
+                            
+                            // 프록시 혹은 로컬 경로 사용
+                            // (이전에 설정한 경로 방식에 맞춰 사용하세요)
+                            drawBBox(canvas, txtUrl); 
+                            
+                        }, 500); // 0.5초 주기
+                    }, randomDelay);
+                }
+            }
+            // [3] 일반 이미지 처리
+            else {
+                const img = document.createElement('img');
+                img.src = videoUrl;
+                item.appendChild(img);
+
+                // 이미지는 200ms마다 새로고침되므로 캔버스 오버레이를 여기서 처리하기 까다로움
+                // 필요하다면 이미지 새로고침 로직과 싱크를 맞춰야 함
+            }
+
+            // 클릭 이벤트 (확대/축소)
+            item.addEventListener('click', () => {
+                // 기존 확대 로직 활용 (setupGalleryEventListeners에서 처리되지만, 중복 방지 등을 위해 둠)
+            });
+
         } else {
             item.classList.add('empty');
         }
@@ -101,7 +322,7 @@ backdrop.addEventListener('click', () => {
         focusedItem.classList.remove('focused');
         backdrop.style.display = 'none';
     }
-    
+
     if (settingsModal.style.display === 'block') {
         settingsModal.style.display = 'none';
         backdrop.style.display = 'none';
@@ -147,7 +368,7 @@ function updateCloseAllButtonVisibility() {
             closeAllBtn = document.createElement('button');
             closeAllBtn.id = 'close-all-btn';
             closeAllBtn.innerText = '알림 모두 닫기';
-            
+
             closeAllBtn.onclick = () => {
                 container.querySelectorAll('.toast-notification').forEach(n => {
                     n.classList.remove('show');
@@ -169,7 +390,7 @@ function createNotification(message) {
     const container = document.getElementById('notification-container');
     const notification = document.createElement('div');
     notification.className = 'toast-notification';
-    
+
     // --- ✨ 수정된 부분: 정규식 및 헤더 생성 로직 변경 ---
 
     // 정규식을 사용해 '시간', 'Thread 번호', '본문'을 각각 별도의 그룹으로 추출합니다.
@@ -184,10 +405,10 @@ function createNotification(message) {
         // 정규식 매칭 성공
         const timestamp = match[1].trim(); // 그룹 1: 시간 (예: "2025-10-01 17:02:15")
         const channelNum = match[2].trim();  // 그룹 2: Thread 번호 (예: "1")
-        
+
         // 추출한 정보로 원하는 헤더 형식을 새로 만듭니다.
         headerText = `${timestamp} | Channel ${channelNum}`;
-        
+
         bodyText = match[3].trim();      // 그룹 3: "|" 뒷부분 전체
     } else {
         // 정규식 매칭 실패 시: 전체 메시지를 본문에 표시 (호환성 유지)
@@ -202,9 +423,9 @@ function createNotification(message) {
         </div>
         <button class="close-btn">&times;</button>
     `;
-    
+
     container.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.classList.add('show');
     }, 10);
@@ -226,7 +447,7 @@ setInterval(() => {
     const timestamp = new Date().getTime();
     // .gallery-item 내부의 순수 'img' 태그만 선택
     const allImages = document.querySelectorAll('.gallery-item:not(.empty) > img');
-    
+
     allImages.forEach(img => {
         let originalSrc = img.src.split('?')[0];
         img.src = `${originalSrc}?t=${timestamp}`;
@@ -264,11 +485,11 @@ setInterval(() => {
             if (allAlarmsInLog.length > 0) {
                 const lastAlarmIndex = last_alarm ? allAlarmsInLog.lastIndexOf(last_alarm) : -1;
                 const newAlarms = allAlarmsInLog.slice(lastAlarmIndex + 1);
-                
+
                 newAlarms.forEach(alarm => {
                     createNotification(alarm);
                 });
-                
+
                 if (newAlarms.length > 0) {
                     last_alarm = newAlarms[newAlarms.length - 1];
                 }

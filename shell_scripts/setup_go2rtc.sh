@@ -18,6 +18,6 @@ echo '''api:
 rtsp:
   listen: ":8554"  # RTSP 서버 포트
 
-log:
+log: 
   level: info''' >> go2trc.yaml
 

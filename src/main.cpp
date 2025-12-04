@@ -451,11 +451,11 @@ void routine(CameraChannel* channel, std::string net_path){
 
         std::stringstream ss_save_path;
         ss_save_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".txt";
-        std::ofstream net_result(ss_save_path.str());
-
-        if (net_result.is_open()) {
+        std::ofstream net_res(ss_save_path.str());
+        
+        if (net_res.is_open()) {
             // 소수점 6자리까지 고정하여 정밀도 확보 (0.123456 형태)
-            net_result << std::fixed << std::setprecision(6);
+            net_res << std::fixed << std::setprecision(6);
 
             for (const auto& det : results) {
                 cv::Rect box = det.box;
@@ -478,14 +478,15 @@ void routine(CameraChannel* channel, std::string net_path){
                 double normalized_height = scaled_box_height / frame.rows;
                 
                 // 좌표가 0~1 범위를 벗어나지 않도록 클램핑 (안전장치)
-                center_x = std::max(0.0, std::min(1.0, center_x));
-                center_y = std::max(0.0, std::min(1.0, center_y));
-                normalized_width = std::max(0.0, std::min(1.0, normalized_width));
-                normalized_height = std::max(0.0, std::min(1.0, normalized_height));
+                // center_x = std::max(0.0, std::min(1.0, center_x));
+                // center_y = std::max(0.0, std::min(1.0, center_y));
+                // normalized_width = std::max(0.0, std::min(1.0, normalized_width));
+                // normalized_height = std::max(0.0, std::min(1.0, normalized_height));
 
                 // 4. 텍스트 파일에 저장
                 // Format: <class_id> <x_center> <y_center> <width> <height>
-                net_result << det.classID << " " 
+                
+                net_res << det.classID << " " 
                         << center_x << " " 
                         << center_y << " " 
                         << normalized_width << " " 
@@ -493,8 +494,8 @@ void routine(CameraChannel* channel, std::string net_path){
                         << std::endl;
             }
             
-            net_result.close();
-            std::cout << "Saved detection results to " << save_path << std::endl;
+            net_res.close();
+            // std::cout << "Saved detection results to " << ss_save_path.str() << std::endl;
         } else {
             std::cerr << "Error: Could not open file for writing." << std::endl;
         }
