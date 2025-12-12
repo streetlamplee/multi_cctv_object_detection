@@ -14,7 +14,7 @@
 // #include "config/iniHandler.h"
 #include <sstream>
 #include <filesystem>
-#include <iomanip>      // std::setw, std::setfill
+#include <iomanip> // std::setw, std::setfill
 #include "config/logHandler.h"
 // #include "legacy/fileServer.h"
 #include "time/timestamp.h"
@@ -23,6 +23,7 @@
 // #include "_modbus/modbus_handler.h" //1119 hj modbus -> mqtt로 변경
 #include "mqttManager/mqttManager.h" //1119 hj modbus -> mqtt로 변경
 #include "config/INIReader.h"
+#include <cstdint>
 
 // --- Global Variables ---
 cv::Mat g_canvas;
@@ -35,10 +36,10 @@ AlarmManager g_alarm_manager; // 1106 hj modbus 적용
 int g_queueMaxSize = 5;
 sem_t *g_sem_image;
 sem_t *g_sem_inference;
-const char* get_image_sem_name = "/get_image";
-const char* infer_sem_name = "/inference";
+const char *get_image_sem_name = "/get_image";
+const char *infer_sem_name = "/inference";
 std::string log_path = "./resource/app.log";
-INIReader* ini_reader;
+INIReader *ini_reader;
 Log log_handler(log_path, 50);
 // fileserver fs;       // nginx 사용으로 인해 사용하지 않음
 
@@ -48,17 +49,18 @@ const unsigned int duration_between_data = 300;
 
 struct CameraChannel;
 void log_worker();
-void routine(CameraChannel* channel, std::string net_path);
+void routine(CameraChannel *channel, std::string net_path);
 void signal_handler(int signum);
 void loadConfig();
 
 // A structure to hold all resources for a single camera channel
-struct CameraChannel {
+struct CameraChannel
+{
     int CameraChannelID;
     int channel_number;
     std::string channel_camera_description;
     std::string robotDestination;
-    CCTV* cctv_instance = nullptr;
+    CCTV *cctv_instance = nullptr;
     // ThreadSafeQueue<cv::Mat> raw_frame_queue{g_queueMaxSize};               // 0908 : not used
     // ThreadSafeQueue<cv::Mat> inference_frame_queue{g_queueMaxSize};         // 0908 : not used
     // ThreadSafeQueue<std::vector<BBoxInfo>> results_queue{g_queueMaxSize};   // 0908 : not used
@@ -75,16 +77,18 @@ struct CameraChannel {
     CameraChannel() {}
     // CameraChannel(cv::Rect roi) : display_roi(roi) {}            // 0908 : not used
     // Cleanup function
-    ~CameraChannel() {
-        if (cctv_instance) {
+    ~CameraChannel()
+    {
+        if (cctv_instance)
+        {
             delete cctv_instance;
         }
     }
 };
 
-
-int main(int argc, char* argv[]) {
-     // --- Initialization ---
+int main(int argc, char *argv[])
+{
+    // --- Initialization ---
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
@@ -102,58 +106,63 @@ int main(int argc, char* argv[]) {
     log_handler.load();
 
     std::string data_gathering_point = ini_reader->Get("Developer Option", "data_gathering_point", "./data");
-    for (int i = 1; i <= std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i++) {
+    for (int i = 1; i <= std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i++)
+    {
         std::stringstream ss;
         ss << data_gathering_point << "/" << i;
         std::filesystem::create_directories(ss.str());
     }
-    for (int i = 1; i <= std::stoi(ini_reader->Get("Alarm Context", "AlarmNum", "6")); i++) {
+    for (int i = 1; i <= std::stoi(ini_reader->Get("Alarm Context", "AlarmNum", "6")); i++)
+    {
         std::stringstream ss;
         ss << "AlarmID" << i;
         g_alarm_manager.alarm_context.push_back(ini_reader->Get("Alarm Context", ss.str(), "간호사 호출 중"));
     }
-    
 
     sem_unlink(get_image_sem_name);
     g_sem_image = sem_open(get_image_sem_name, O_CREAT, 0644, 6);
-    if (g_sem_image == SEM_FAILED) {
-        std::cerr<<"sem_open failed (get_image)" << std::endl;
+    if (g_sem_image == SEM_FAILED)
+    {
+        std::cerr << "sem_open failed (get_image)" << std::endl;
         return 1;
     }
     sem_unlink(infer_sem_name);
     g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 6);
-    if (g_sem_inference == SEM_FAILED) {
+    if (g_sem_inference == SEM_FAILED)
+    {
         std::cerr << "sem_open failed (inference)" << std::endl;
         return 1;
     }
 
     // 1119 hj mqtt
     std::string address = ini_reader->Get("MQTT", "BrokerIP", "tcp://192.168.0.35:1883");
-    std::string clientID = ini_reader->Get("MQTT","ClientID","CCTV_MAIN");
+    std::string clientID = ini_reader->Get("MQTT", "ClientID", "CCTV_MAIN");
     std::string userID = ini_reader->Get("MQTT", "UserID", "healthmon");
     std::string password = ini_reader->Get("MQTT", "Password", "healthmon");
     MqttManager::getInstance().connect(address, clientID, userID, password);
 
     // --- Configuration ---
     std::vector<std::unique_ptr<CameraChannel>> channels;
-    
-    for (int i = 0; i < std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i ++) {
+
+    for (int i = 0; i < std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i++)
+    {
         channels.push_back(std::make_unique<CameraChannel>());
     }
-    
+
     // IMPORTANT: Set the correct RTSP URL for each camera "rtsp://admin:q1w2e3r4@192.168.1.100:554/Streaming/Channels/202/"
-    for (int i = 1; i <= std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i ++) {
+    for (int i = 1; i <= std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i++)
+    {
         std::stringstream ss;
         ss << "window" << i << "_channel";
         std::string key = ss.str();
-        channels[i-1]->channel_number = std::stoi(ini_reader->Get("CCTV Connection", key, "101"));
-        channels[i-1]->CameraChannelID = i;
-        channels[i-1]->channel_camera_description = ini_reader->Get("Camera Description", "Camera" + std::to_string(i), "Unknown");
-        channels[i-1]->robotDestination = ini_reader->Get("Robot Destination", "Camera" + std::to_string(i), "Unknown");
+        channels[i - 1]->channel_number = std::stoi(ini_reader->Get("CCTV Connection", key, "101"));
+        channels[i - 1]->CameraChannelID = i;
+        channels[i - 1]->channel_camera_description = ini_reader->Get("Camera Description", "Camera" + std::to_string(i), "Unknown");
+        channels[i - 1]->robotDestination = ini_reader->Get("Robot Destination", "Camera" + std::to_string(i), "Unknown");
     }
     // channels[0]->connection_url = "/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=704&videoResolutionHeight=480";
-    // channels[1]->connection_url = ""; 
-    // channels[2]->connection_url = ""; 
+    // channels[1]->connection_url = "";
+    // channels[2]->connection_url = "";
     // channels[3]->connection_url = "";
 
     // --- Start Threads ---
@@ -165,9 +174,10 @@ int main(int argc, char* argv[]) {
 
     log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행", 0);
     //~ channels[0]->routine_thread = std::thread(routine, channels[0].get(), onnx_path);
-    for (auto& channel : channels) {
-		channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
-        // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path); 
+    for (auto &channel : channels)
+    {
+        channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
+        // pthread_create(&channel->routine_thread, NULL, routine, channel.get(), onnx_path);
         // channel->producer_thread = std::thread(producer, channel.get());
         // channel->inference_alarm_thread = std::thread(inference_alarm_worker, channel.get(), onnx_path);
         // channel->alarm_thread = std::thread(alarm_worker, channel.get());
@@ -182,12 +192,12 @@ int main(int argc, char* argv[]) {
 
     // --- Wait for Threads to Finish ---
     //~ channels[0]->routine_thread.join();
-    for (auto& channel : channels) {
+    for (auto &channel : channels)
+    {
         channel->routine_thread.join();
-    //     // channel->producer_thread.join();
-    //     // channel->inference_alarm_thread.join();
-    //     // channel->alarm_thread.join();
-
+        //     // channel->producer_thread.join();
+        //     // channel->inference_alarm_thread.join();
+        //     // channel->alarm_thread.join();
     }
     // painter_thread.join();
     // imageshow_thread.join();
@@ -197,11 +207,6 @@ int main(int argc, char* argv[]) {
     // 0910 httplib 대신 nginx 사용으로 변경
     // server_thread.join();
 
-
-    
-    
-
-    
     std::cout << "[Main] Server thread 종료 완료. semaphore unlink 시도..." << std::endl;
     log_handler.push(Log::Level::INFO, "모든 thread 종료 완료. semaphore unlink 시작", 0);
     sem_close(g_sem_image);
@@ -213,23 +218,30 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void loadConfig(){
+void loadConfig()
+{
     ini_reader = new INIReader("resource/app.ini");
 
-    if (ini_reader->ParseError() < 0) {
+    if (ini_reader->ParseError() < 0)
+    {
         std::cerr << "[Config] 설정 파일 'app.ini' 파싱 실패" << std::endl;
         return;
     }
     return;
 }
 
-void log_worker() {
+void log_worker()
+{
     bool heartbit = true;
-    while(g_running) {
+    while (g_running)
+    {
         log_handler.save();
-        if (heartbit) {
+        if (heartbit)
+        {
             std::cout << ">>>" << std::endl;
-        } else {
+        }
+        else
+        {
             std::cout << ">>" << std::endl;
         }
         heartbit = !heartbit;
@@ -237,7 +249,8 @@ void log_worker() {
     }
 }
 
-void routine(CameraChannel* channel, std::string net_path){
+void routine(CameraChannel *channel, std::string net_path)
+{
     std::string data_gathering_point = ini_reader->Get("Developer Option", "data_gathering_point", "./data");
     std::stringstream l;
     cv::Mat frame;
@@ -250,72 +263,77 @@ void routine(CameraChannel* channel, std::string net_path){
     int height = std::stoi(ini_reader->Get("Window Configuration", "window_height", "270"));
     std::stringstream ss;
     ss << "Camera" << channel->CameraChannelID;
-    int cam_description = std::stoi(ini_reader->Get("Camera Description",ss.str(), "Unknown"));
+    int cam_description = std::stoi(ini_reader->Get("Camera Description", ss.str(), "Unknown"));
     // std::vector<Alarm> local_alarms = g_alarms; // 1106 hj modbus 적용
     // std::string now_alarm_condition = ""; // 1106 hj modbus 적용
     // int alarm_timeout = 0; // 1106 hj modbus 적용
     std::stringstream net_result;
     cv::dnn::Net net = cv::dnn::readNet(net_path);
-    if (net.empty()) {
+    if (net.empty())
+    {
         std::cerr << "Error: Cannot load ONNX model" << std::endl;
         log_handler.push(Log::Level::ERROR, "Cannot load ONNX model", channel->CameraChannelID);
         return;
     }
     net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
     net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-	
-	// 0911 bottleneck test
-	bool test = false;
-	if (channel->CameraChannelID == 1) {
-		test = false;
-	}
+
+    // 0911 bottleneck test
+    bool test = false;
+    if (channel->CameraChannelID == 1)
+    {
+        test = false;
+    }
     auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff;
-    while (g_running) {
+    while (g_running)
+    {
         // 0919 thread elapsed time 체크
         auto thread_start = std::chrono::high_resolution_clock::now();
-        
-        
+
         // NVR 접속 후, channel에 맞게 데이터 가져오기
         // std::cout << "[Thread " << channel->CameraChannelID << "] semaphore 할당 준비" << std::endl;
         sem_wait(g_sem_image);
-        
 
         getFrame_api(id, password, ip, port, channel->channel_number, width, height, frame, sub_frame);
-		//~ if (test) {
-			//~ std::chrono::duration<double> diff = end-start;
-			//~ std::cout << "[Thread " << channel->CameraChannelID << "] image grab time: " << diff.count() << " s" << std::endl;
-		//~ }
+        //~ if (test) {
+        //~ std::chrono::duration<double> diff = end-start;
+        //~ std::cout << "[Thread " << channel->CameraChannelID << "] image grab time: " << diff.count() << " s" << std::endl;
+        //~ }
         // std::cout << "[Thread " << channel->CameraChannelID << "] semaphore 할당 해제" << std::endl;
         sem_post(g_sem_image);
-        
-        
+
         // 추론 process
         // int risk_level = 0; // 1106 hj modbus 적용
 
         channel->detected_class.clear();
-        if (frame.empty() || !g_running) {
+        if (frame.empty() || !g_running)
+        {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             continue;
         }
 
         cv::Mat frame_rgb;
-        if (cv::sum(frame) == cv::Scalar(0)) { continue; }
+        if (cv::sum(frame) == cv::Scalar(0))
+        {
+            continue;
+        }
 
         sem_wait(g_sem_inference);
         cv::cvtColor(sub_frame, frame_rgb, cv::COLOR_BGR2RGB);
         auto results = inference(net, frame_rgb);
         sem_post(g_sem_inference);
-        
-		// if (test) {
-		// 	std::chrono::duration<double> diff = end-start;
-		// 	std::cout << "[Thread " << channel->CameraChannelID << "] inference time: " << diff.count() << " s" << std::endl;
-		// }
-		//~ start = std::chrono::high_resolution_clock::now();
-        
+
+        // if (test) {
+        // 	std::chrono::duration<double> diff = end-start;
+        // 	std::cout << "[Thread " << channel->CameraChannelID << "] inference time: " << diff.count() << " s" << std::endl;
+        // }
+        //~ start = std::chrono::high_resolution_clock::now();
+
         // channel->results_queue.push(results);
-        for (auto& det: results) {
+        for (auto &det : results)
+        {
             channel->detected_class.push_back(det.classID);
         }
 
@@ -341,11 +359,11 @@ void routine(CameraChannel* channel, std::string net_path){
             std::string condition = alarm.get_condition();
             int target_channel = alarm.get_target_channel();
             std::string alarm_sentence = alarm.get_alarm_sentence();
-            
+
             if (target_channel != channel->CameraChannelID) {
                 continue;
             }
-            if (alarm.get_risk_level() <= risk_level) { 
+            if (alarm.get_risk_level() <= risk_level) {
                 continue;
             }
             if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
@@ -375,30 +393,34 @@ void routine(CameraChannel* channel, std::string net_path){
             }
         } else { }
         */
-        
+
         //~ end = std::chrono::high_resolution_clock::now();
-		//~ if (test) {
-			//~ std::chrono::duration<double> diff = end-start;
-			//~ std::cout << "[Thread " << channel->CameraChannelID << "] alarm detect time: " << diff.count() << " s" << std::endl;
-		//~ }
-		//~ start = std::chrono::high_resolution_clock::now();
-        
+        //~ if (test) {
+        //~ std::chrono::duration<double> diff = end-start;
+        //~ std::cout << "[Thread " << channel->CameraChannelID << "] alarm detect time: " << diff.count() << " s" << std::endl;
+        //~ }
+        //~ start = std::chrono::high_resolution_clock::now();
+
         // 추론 후, 그림 그리기
         cv::Scalar color_anchor;
         // cv::Scalar color_boundary;
-        
+
         // 2. Lock the canvas and draw everything
-        
 
-            // Draw the latest frame to its ROI
+        // Draw the latest frame to its ROI
 
+        // alarm 발생 시, 빨간 색, 아닐 시 초록 색
 
-            // alarm 발생 시, 빨간 색, 아닐 시 초록 색
-
-        if (channel->alarm == 0){
-            color_anchor = cv::Scalar(0,255,0);
-        } else  {
-            color_anchor = cv::Scalar(0,0,255);
+        uint8_t isAlarm;
+        if (channel->alarm == 0)
+        {
+            color_anchor = cv::Scalar(0, 255, 0);
+            isAlarm = 0;
+        }
+        else
+        {
+            color_anchor = cv::Scalar(0, 0, 255);
+            isAlarm = 1;
         }
 
         // 0829 이현진 점유율 테스트
@@ -406,14 +428,14 @@ void routine(CameraChannel* channel, std::string net_path){
         //     cv::imshow("image", latest_frames[i]);
         //     // std::cout << latest_frames[i].size << std::endl;
         // }
-        
-        
+
         // Draw the latest bounding boxes to its ROI, applying the class filter
-        // alarm 테두리 빨간 색 처리 코드  
-        cv::Mat frame_save = frame.clone(); 
+        // alarm 테두리 빨간 색 처리 코드
+        cv::Mat frame_save = frame.clone();
         // cv::rectangle(sub_frame, cv::Rect(0,0,width, height), color_boundary, 3);
-        
-        for (const auto& det : results) {
+
+        for (const auto &det : results)
+        {
             cv::Rect box = det.box;
             // 1. sub_frame과 frame 간의 스케일 비율 계산
             double scale_x = (double)frame.cols / sub_frame.cols;
@@ -432,13 +454,13 @@ void routine(CameraChannel* channel, std::string net_path){
             double normalized_height = scaled_box_height / frame.rows;
 
             // YOLO 포맷에 맞게 저장
-            net_result << det.classID << " " 
-                    << center_x << " " 
-                    << center_y << " " 
-                    << normalized_width << " " 
-                    << normalized_height
-                    << std::endl;
-            
+            net_result << det.classID << " "
+                       << center_x << " "
+                       << center_y << " "
+                       << normalized_width << " "
+                       << normalized_height
+                       << std::endl;
+
             // 화면에 그리는 부분은 기존처럼 sub_frame에 그리면 됩니다.
             cv::rectangle(sub_frame, box, color_anchor, 2);
             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
@@ -451,13 +473,15 @@ void routine(CameraChannel* channel, std::string net_path){
 
         std::stringstream ss_save_path;
         ss_save_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".txt";
-        std::ofstream net_res(ss_save_path.str());
-        
-        if (net_res.is_open()) {
+        std::ofstream net_res(ss_save_path.str()); // html 에서 읽어가는 txt 파일
+
+        if (net_res.is_open())
+        {
             // 소수점 6자리까지 고정하여 정밀도 확보 (0.123456 형태)
             net_res << std::fixed << std::setprecision(6);
 
-            for (const auto& det : results) {
+            for (const auto &det : results)
+            {
                 cv::Rect box = det.box;
 
                 // 1. sub_frame과 frame 간의 스케일 비율 계산
@@ -476,7 +500,7 @@ void routine(CameraChannel* channel, std::string net_path){
                 double center_y = (scaled_box_y + scaled_box_height / 2.0) / frame.rows;
                 double normalized_width = scaled_box_width / frame.cols;
                 double normalized_height = scaled_box_height / frame.rows;
-                
+
                 // 좌표가 0~1 범위를 벗어나지 않도록 클램핑 (안전장치)
                 // center_x = std::max(0.0, std::min(1.0, center_x));
                 // center_y = std::max(0.0, std::min(1.0, center_y));
@@ -485,42 +509,44 @@ void routine(CameraChannel* channel, std::string net_path){
 
                 // 4. 텍스트 파일에 저장
                 // Format: <class_id> <x_center> <y_center> <width> <height>
-                
-                net_res << det.classID << " " 
-                        << center_x << " " 
-                        << center_y << " " 
-                        << normalized_width << " " 
+
+                net_res << static_cast<int>(isAlarm) << " "
+                        << det.classID << " "
+                        << center_x << " "
+                        << center_y << " "
+                        << normalized_width << " "
                         << normalized_height
                         << std::endl;
             }
-            
+
             net_res.close();
             // std::cout << "Saved detection results to " << ss_save_path.str() << std::endl;
-        } else {
+        }
+        else
+        {
             std::cerr << "Error: Could not open file for writing." << std::endl;
         }
 
-        
-		//~ end = std::chrono::high_resolution_clock::now();
-		//~ if (test) {
-			//~ std::chrono::duration<double> diff = end-start;
-			//~ std::cout << "[Thread " << channel->CameraChannelID << "] image drawing time: " << diff.count() << " s" << std::endl;
-		//~ }
-		//~ start = std::chrono::high_resolution_clock::now();
-        
+        //~ end = std::chrono::high_resolution_clock::now();
+        //~ if (test) {
+        //~ std::chrono::duration<double> diff = end-start;
+        //~ std::cout << "[Thread " << channel->CameraChannelID << "] image drawing time: " << diff.count() << " s" << std::endl;
+        //~ }
+        //~ start = std::chrono::high_resolution_clock::now();
+
         std::stringstream ss_output_path;
-        
+
         // std::filesystem::path output_path_fs = "./resource/output";
         // std::filesystem::create_directories(output_path_fs);
         ss_output_path << output_path << "/" << std::setfill('0') << std::setw(2) << channel->CameraChannelID << ".jpg";
         cv::imwrite(ss_output_path.str(), sub_frame);
-        
+
         //~ end = std::chrono::high_resolution_clock::now();
-		//~ if (test) {
-			//~ std::chrono::duration<double> diff = end-start;
-			//~ std::cout << "[Thread " << channel->CameraChannelID << "] image saving time: " << diff.count() << " s" << std::endl;
-		//~ }
-		//~ start = std::chrono::high_resolution_clock::now();
+        //~ if (test) {
+        //~ std::chrono::duration<double> diff = end-start;
+        //~ std::cout << "[Thread " << channel->CameraChannelID << "] image saving time: " << diff.count() << " s" << std::endl;
+        //~ }
+        //~ start = std::chrono::high_resolution_clock::now();
 
         // 0910 디버그용.
         // log_handler.push(Log::Level::ALARM, "Debug...", channel->CameraChannelID);
@@ -528,7 +554,8 @@ void routine(CameraChannel* channel, std::string net_path){
         // 0918 데이터 수집 관련 코드 작성
         end = std::chrono::high_resolution_clock::now();
         diff = end - start;
-        if (diff.count() > (duration_between_data)) {
+        if (diff.count() > (duration_between_data))
+        {
             std::stringstream imgfilepath;
             std::stringstream labelfilepath;
             std::stringstream folderpath;
@@ -539,23 +566,23 @@ void routine(CameraChannel* channel, std::string net_path){
             labelfilepath << folderpath.str() << "/" << filename << ".txt";
             cv::imwrite(imgfilepath.str(), frame_save);
             label_ofstream.open(labelfilepath.str());
-            if (label_ofstream.is_open()) {
+            if (label_ofstream.is_open())
+            {
                 label_ofstream.write(net_result.str().c_str(), net_result.str().size());
             }
-
 
             delete_oldest_file_threshold(std::filesystem::path(folderpath.str()), total_data_per_channel * 2);
 
             start = std::chrono::high_resolution_clock::now();
-
         }
         net_result.str("");
         net_result.clear();
 
-        //0919 thread elapsed time 체크
+        // 0919 thread elapsed time 체크
         auto thread_end = std::chrono::high_resolution_clock::now();
 
-        if (test) {
+        if (test)
+        {
             auto thread_diff = thread_end - thread_start;
             std::cout << "thread elapsed time : " << thread_diff.count() << std::endl;
         }
@@ -564,7 +591,8 @@ void routine(CameraChannel* channel, std::string net_path){
     }
 }
 
-void signal_handler(int signum) {
+void signal_handler(int signum)
+{
     std::cout << "[Main] 종료 신호 수신... " << std::endl;
     std::cout << "[Main] 이미 실행된 thread의 종료까지 대기..." << std::endl;
     log_handler.push(Log::Level::INFO, "종료 신호 수신...", 0);
@@ -576,7 +604,6 @@ void signal_handler(int signum) {
     // exit(signum);
 }
 
-
 // not used code under
 
 // nginx 사용으로 변경
@@ -586,7 +613,6 @@ void signal_handler(int signum) {
 // }
 
 // log_worker : n 초마다 log class의 정보를 텍스트 파일로 저장
-
 
 // void modbus_alarm_reset_worker() {
 //     while (g_running) {
@@ -615,7 +641,6 @@ void signal_handler(int signum) {
 
 // routine : 하나의 Camera Channel에 할당되는 routine 구현
 
-
 // // Producer: Captures frames from a specific camera channel
 // void producer(CameraChannel* channel) {
 //     // channel->cctv_instance = new CCTV(channel->rtsp_url, &channel->raw_frame_stack);
@@ -630,7 +655,7 @@ void signal_handler(int signum) {
 //     int height = std::stoi(g_ini.at("window_height")) / std::stoi(g_ini.at("window_row"));
 //     while(g_running){
 //         if (channel->raw_frame_queue.size() >= g_queueMaxSize) {
-//             std::this_thread::sleep_for(std::chrono::milliseconds(10));    
+//             std::this_thread::sleep_for(std::chrono::milliseconds(10));
 //             continue;
 //         }
 //         getFrame_api(id, password, ip, port, channel->channel_number, width, height, frame);
@@ -666,13 +691,13 @@ void signal_handler(int signum) {
 //         channel->results_queue.push(results);
 //         for (auto& det: results) {
 //             channel->detected_class.push_back(det.classID);
-//         }    
+//         }
 //         for (Alarm alarm : local_alarms) {
 //             std::string condition = alarm.get_condition();
 //             {
 //                 // std::lock_guard<std::mutex> lock(g_alarm_mutex);
 //                 std::vector<int> detectedClass = channel->detected_class;
-//                 if (alarm.get_risk_level() < risk_level) { 
+//                 if (alarm.get_risk_level() < risk_level) {
 //                     continue;
 //                 }
 //                 if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
@@ -684,7 +709,7 @@ void signal_handler(int signum) {
 //             }
 //         }
 //         if (isAlarm) {
-//             ++counter;     
+//             ++counter;
 //         }
 //         std::cout << "[Alarm Thread] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
 //         std::cout << "[Alarm Thread] " << "Warning condition approved, " << counter << "times" << std::endl;
@@ -749,9 +774,9 @@ void signal_handler(int signum) {
 //                 // if (!latest_frames[i].empty()){
 //                 //     cv::imshow("image", latest_frames[i]);
 //                 //     // std::cout << latest_frames[i].size << std::endl;
-//                 //        
+//                 //
 //                 // Draw the latest bounding boxes to its ROI, applying the class filter
-//                 // alarm 테두리 빨간 색 처리 코드   
+//                 // alarm 테두리 빨간 색 처리 코드
 //                 cv::rectangle(g_canvas, channels[i]->display_roi, color_boundary, 3);
 //                 if (!latest_results[i].empty()) {
 //                     for (const auto& det : latest_results[i]) {
@@ -794,7 +819,7 @@ void signal_handler(int signum) {
 // //     std::vector<Alarm> local_alarms = g_alarms;
 // //     std::string alarm_condition = "";
 // //     int counter = 0;
-// //    
+// //
 // //     while(g_running) {
 // //         int risk_level = 0;
 // //         bool isAlarm = false;
@@ -803,7 +828,7 @@ void signal_handler(int signum) {
 // //             {
 // //                 std::lock_guard<std::mutex> lock(g_alarm_mutex);
 // //                 std::vector<int> detectedClass = cc->detected_class;
-// //                 if (alarm.get_risk_level() < risk_level) { 
+// //                 if (alarm.get_risk_level() < risk_level) {
 // //                     continue;
 // //                 }
 // //                 if (define_alarm(condition, detectedClass)) {  // 알람 condition이 충족되면
@@ -817,7 +842,7 @@ void signal_handler(int signum) {
 // //         }
 // //         if (isAlarm) {
 // //             ++counter;
-// //            
+// //
 // //         }
 // //         std::cout << "[Alarm Thread] " << "Condition : " << alarm_condition << ", risk level : " << risk_level << std::endl;
 // //         std::cout << "[Alarm Thread] " << "Warning condition approved, " << counter << "times" << std::endl;
@@ -863,7 +888,7 @@ void signal_handler(int signum) {
 // }
 //
 // int main_before_0908(int argc, char* argv[]) { // channel과 기능 별로 모든 thread 를 분리
-    // --- Initialization ---
+// --- Initialization ---
 //     std::string onnx_path = "./resource/yolov8n.onnx";
 //     std::string config_path = "./resource/alarm.conf";
 //     std::string ini_path = "./resource/app.ini";
@@ -889,8 +914,8 @@ void signal_handler(int signum) {
 //         channels[i-1]->channel_number = std::stoi(g_ini[key]);
 //     }
 //     // channels[0]->connection_url = "/ISAPI/ContentMgmt/StreamingProxy/channels/"+std::to_string(channel)+"/picture?videoResolutionWidth=704&videoResolutionHeight=480";
-//     // channels[1]->connection_url = ""; 
-//     // channels[2]->connection_url = ""; 
+//     // channels[1]->connection_url = "";
+//     // channels[2]->connection_url = "";
 //     // channels[3]->connection_url = "";
 //     // --- Start Threads ---
 //     for (auto& channel : channels) {
@@ -910,5 +935,3 @@ void signal_handler(int signum) {
 //     imageshow_thread.join();
 //     return 0;
 // }
-
-

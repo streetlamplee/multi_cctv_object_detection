@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,28 +9,29 @@
         body {
             font-family: sans-serif;
             margin: 0;
-            display:flex;
+            display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f0f0f0;
+            background-color: #333333;
             padding: 0px 0;
         }
 
         .gallery-container {
             display: grid;
             gap: 5px;
-            padding: 0px;
-            max-width: 1800px;
+            padding: 5px;
+            max-width: 100%;
+            max_height: 100%;
             width: 100%;
             box-sizing: border-box;
         }
 
         .gallery-item {
             overflow: hidden;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            /* border-radius: 8px; */
+            /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); */
             cursor: pointer;
             transition: all 0.3s ease-in-out;
             position: relative;
@@ -48,26 +50,31 @@
 
         @media (max-width: 768px) {
             .gallery-container {
-                grid-template-columns: repeat(2, 1fr) !important; /* Mobile view override */
+                grid-template-columns: repeat(2, 1fr) !important;
+                /* Mobile view override */
             }
         }
 
         .gallery-item.stream-mode {
-            aspect-ratio: 16 / 9; /* 가로 16 : 세로 9 비율 고정 (CCTV 표준) */
-            height: 100%;         /* 높이는 비율에 맞춰 자동 조절 */
-            background-color: gray; /* 로딩 중일 때 검은색 배경 */
+            aspect-ratio: 16 / 9;
+            /* 가로 16 : 세로 9 비율 고정 (CCTV 표준) */
+            height: 100%;
+            /* 높이는 비율에 맞춰 자동 조절 */
+            background-color: gray;
+            /* 로딩 중일 때 검은색 배경 */
         }
 
         .stream-iframe {
             position: absolute;
             top: 50%;
             left: 50%;
-            
+
             /* [핵심] 100%가 아니라 104%로 설정하여 8px 여백을 강제로 밖으로 밀어냄 */
-            width: 104%; 
+            width: 104%;
             height: 104%;
-            
-            transform: translate(-50%, -50%); /* 중앙 정렬 */
+
+            transform: translate(-50%, -50%);
+            /* 중앙 정렬 */
             border: none;
             pointer-events: none;
             z-index: 1;
@@ -134,20 +141,27 @@
         }
 
         .toast-notification {
-            background-color: #333; /* 바디와 유사한 밝은 배경색으로 변경 */
-            color: #f8f8f8; /* 텍스트 색상 변경 */
-            padding: 0; /* 내부에서 여백을 관리하므로 제거 */
+            background-color: #AA3333;
+            /* 바디와 유사한 밝은 배경색으로 변경 */
+            color: #f8f8f8;
+            /* 텍스트 색상 변경 */
+            padding: 0;
+            /* 내부에서 여백을 관리하므로 제거 */
             border-radius: 8px;
             margin-top: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            width: 500px; /* 너비 소폭 증가 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            width: 1440px;
+            /* 너비 소폭 증가 */
+            height: 300px;
             opacity: 0;
             transform: translateX(100%);
             transition: all 0.4s ease-in-out;
             display: flex;
             justify-content: space-between;
-            align-items: stretch; /* 아이템들이 세로로 꽉 차도록 변경 */
-            overflow: hidden; /* border-radius가 자식 요소에 적용되도록 */
+            align-items: stretch;
+            /* 아이템들이 세로로 꽉 차도록 변경 */
+            overflow: hidden;
+            /* border-radius가 자식 요소에 적용되도록 */
         }
 
         .toast-notification.show {
@@ -157,37 +171,50 @@
 
         /* --- 추가된 스타일 시작 --- */
         .toast-content {
-            flex-grow: 1; /* 닫기 버튼을 제외한 모든 공간 차지 */
+            flex-grow: 1;
+            /* 닫기 버튼을 제외한 모든 공간 차지 */
             display: flex;
-            flex-direction: column; /* 헤더와 바디를 수직으로 정렬 */
+            flex-direction: column;
+            /* 헤더와 바디를 수직으로 정렬 */
         }
 
         .toast-header {
-            background-color: #333; /* 기존과 같은 어두운 배경 */
-            color: #aaaaaa;
-            font-size: 1.1em;
-            padding: 8px 12px 4px 12px; /* 사용자가 조정할 수 있는 값: 헤더의 상하좌우 여백 */
+            background-color: #AA3333;
+            /* 기존과 같은 어두운 배경 */
+            color: #EEEEEE;
+            font-size: 3em;
+            padding: 8px 12px 4px 12px;
+            /* 사용자가 조정할 수 있는 값: 헤더의 상하좌우 여백 */
             /* border-bottom: 1px solid #444;  사용자가 조정할 수 있는 값: 헤더와 본문 구분선 */
         }
 
         .toast-body {
-            padding: 6px 12px 12px 12px; /* 사용자가 조정할 수 있는 값: 본문의 상하좌우 여백 */
+            padding: 6px 12px 12px 12px;
+            /* 사용자가 조정할 수 있는 값: 본문의 상하좌우 여백 */
             color: white;
             font-weight: bold;
-            font-size: 1.3em;
+            font-size: 5em;
             line-height: 1.4;
+
+            flex-grow: 1;
+            display: flex;
+            align-items: center
         }
+
         /* --- 추가된 스타일 끝 --- */
 
         .toast-notification .close-btn {
             background: none;
             border: none;
             color: #aaa;
-            font-size: 20px;
+            font-size: 80px;
             cursor: pointer;
-            padding: 0 15px; /* 닫기 버튼의 클릭 영역 확보 */
-            align-self: center; /* 중앙 정렬 */
-            margin-left: 0; /* toast-content 와의 간격 확보를 위해 제거 */
+            padding: 0 15px;
+            /* 닫기 버튼의 클릭 영역 확보 */
+            align-self: center;
+            /* 중앙 정렬 */
+            margin-left: 0;
+            /* toast-content 와의 간격 확보를 위해 제거 */
         }
 
         .toast-notification .close-btn:hover {
@@ -207,6 +234,7 @@
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
             pointer-events: none;
+            font-size: 1.4em;
         }
 
         #close-all-btn.show {
@@ -222,26 +250,31 @@
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.7);
-            z-index: 1001; /* Modal should be on top of this */
+            z-index: 1001;
+            /* Modal should be on top of this */
         }
 
         .gallery-item.focused {
             position: fixed;
             top: 50%;
             left: 50%;
-            
+
             /* [수정 1] 스케일 대신 명확한 크기 지정 */
-            width: 80vw;           /* 화면 너비의 80% 사용 */
-            max-width: 1280px;     /* 너무 커지지 않게 최대폭 제한 */
-            height: auto;          /* 높이는 자동 */
-            aspect-ratio: 16 / 9;  /* [중요] CCTV 비율(16:9) 강제 유지 */
-            
+            width: 100vw;
+            /* 화면 너비의 80% 사용 */
+            max-width: 100%;
+            /* 너무 커지지 않게 최대폭 제한 */
+            height: auto;
+            /* 높이는 자동 */
+            /* aspect-ratio: 16 / 9;   */
+
             /* [수정 2] 스케일(scale) 제거, 중앙 정렬만 유지 */
-            transform: translate(-50%, -50%); 
-            
-            z-index: 1003;
-            box-shadow: 0 0 100px rgba(0,0,0,0.7); /* 집중도를 위한 그림자 추가 */
-            border: 2px solid #444; /* 테두리 마감 */
+            transform: translate(-50%, -50%);
+
+            z-index: 1003 !important;
+            /* box-shadow: 0 0 100px rgba(0,0,0,0.7);  */
+            border: 2px solid #444;
+            /* 테두리 마감 */
         }
 
         .gallery-item.empty {
@@ -251,18 +284,18 @@
 
         .floating-btn {
             position: fixed;
-            top : 20px;
             left: 20px;
+            bottom: 20px;
             padding: 12px 24px;
             border-radius: 30px;
             background-color: #007bff;
             color: white;
             border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
-            z-index: 999;
+            z-index: 9999;
         }
 
         .modal-panel {
@@ -273,7 +306,7 @@
             z-index: 1002;
             background: white;
             border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
             width: 90vw;
             max-width: 600px;
         }
@@ -311,7 +344,8 @@
 
         /* 부모 요소는 relative여야 자식들이 absolute로 겹쳐짐 */
         .gallery-item {
-            position: relative; /* 필수 */
+            position: relative;
+            /* 필수 */
             overflow: hidden;
             /* ...기존 스타일... */
         }
@@ -330,11 +364,50 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* 클릭 이벤트를 비디오로 통과시킴 (확대/축소 기능 유지) */
+            pointer-events: none;
+            /* 클릭 이벤트를 비디오로 통과시킴 (확대/축소 기능 유지) */
             z-index: 10;
+        }
+
+        /* --- [추가] 위험 알림용 테두리 애니메이션 --- */
+        @keyframes hazard-blink {
+            0% {
+                border-color: #FF0000;
+                /* 빨강 (위험) */
+                box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.5);
+            }
+
+            50% {
+                border-color: #FFFF00;
+                /* 노랑 (주의/고시인성) */
+                box-shadow: inset 0 0 20px rgba(255, 255, 0, 0.5);
+            }
+
+            100% {
+                border-color: #FF0000;
+                box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.5);
+            }
+        }
+
+        /* 알람이 발생한 갤러리 아이템에 붙을 클래스 */
+        .gallery-item.alarm-active {
+            border: 8px solid #FF0000;
+            /* 기본 두께와 색상 */
+            animation: hazard-blink 0.5s infinite;
+            /* 0.5초 간격으로 무한 반복 */
+            box-sizing: border-box;
+            /* 테두리가 레이아웃을 깨지 않도록 설정 */
+            z-index: 100;
+        }
+
+        #openSettingsBtn {
+            /* 원래 있던 스타일들은 그대로 두셔도 되고, 다 지워도 됩니다. */
+            /* 핵심: 화면에서 버튼 숨기기 */
+            display: none !important;
         }
     </style>
 </head>
+
 <body>
 
     <div class="backdrop" id="backdrop"></div>
@@ -348,8 +421,8 @@
             <label for="colsInput">가로:</label>
             <input type="number" id="colsInput" value="4" min="1">
             <label for="rowsInput">세로:</label>
-            <input type="number" id="rowsInput" value="3" min="1">
-            
+            <input type="number" id="rowsInput" value="4" min="1">
+
             <label for="imageUrls" style="width: 100%;">이미지 URL (한 줄에 하나씩):</label>
             <textarea id="imageUrls">rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/01.txt
 rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/02.txt
@@ -363,7 +436,7 @@ rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/09.txt
 rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/10.txt
 rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/11.txt
 rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/12.txt</textarea>
-            
+
             <button id="updateGridBtn">그리드 업데이트</button>
         </div>
     </div>
@@ -372,7 +445,7 @@ rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/12.txt<
 
     <button id="openSettingsBtn" class="floating-btn">설정</button>
 
-    <div class="text-box-container">
+    <!-- <div class="text-box-container">
         <div class="text-box-header">
             <span>실시간 로그</span>
             <span class="counter" id="counter">카운터: 0</span>
@@ -380,11 +453,12 @@ rtsp://admin:q1w2e3r4@192.168.0.100:554/Streaming/Channels/201, ./output/12.txt<
         <div class="text-box" id="textBox">
             <div class="text-line">시스템이 시작되었습니다.</div>
         </div>
-    </div>
+    </div> -->
 
     <div id="notification-container"></div>
 
     <script src="script.js" defer></script>
 
 </body>
+
 </html>

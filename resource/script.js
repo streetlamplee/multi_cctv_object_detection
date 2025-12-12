@@ -5,6 +5,68 @@ const colsInput = document.getElementById('colsInput');
 const rowsInput = document.getElementById('rowsInput');
 const imageUrlsInput = document.getElementById('imageUrls');
 const updateGridBtn = document.getElementById('updateGridBtn');
+// const alertSound = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU");
+const alarmSound = new Audio('./resource/alarm.mp3');
+alarmSound.loop = true;
+
+const AlarmType = {
+    0: "standing",
+    1: "lying down on bed",
+    2: "sitting on bed",
+    3: "fallen down",
+    4: "wheel chair",
+    5: "unknown status",
+    6: "sitting on chair",
+    7: "sitting on the floor",
+    8: "food tray",
+    9: "perch on bed",
+    10: "staff",
+}
+
+async function startAlarm() {
+    try {
+        await alarmSound.play();
+        console.log("알람 재생 시작");
+    } catch (err) {
+        console.error("재생 실패 (브라우저 정책 등):", err);
+    }
+}
+
+function stopAlarm() {
+    alarmSound.pause();
+    alarmSound.currentTime = 0; // 재생 위치를 처음으로 되돌림
+    console.log("알람 정지");
+}
+
+// function playAlarmPattern() {
+//     // 소리를 재생하는 작은 헬퍼 함수
+//     const playBeep = () => {
+//         // cloneNode()를 사용해야 이전 소리가 안 끝났어도 겹쳐서 소리가 납니다 (빠른 비프음 구현 필수)
+//         const sound = alertSound.cloneNode();
+//         sound.volume = 0.5; // 소리 크기 (0.0 ~ 1.0)
+//         sound.play().catch(() => { console.warn('소리 재생 실패(사용자 클릭 필요)'); });
+//     };
+
+//     // --- 첫 번째 묶음 (띡-띡-띡) ---
+//     playBeep();
+//     setTimeout(playBeep, 150); // 0.15초 뒤
+//     setTimeout(playBeep, 300); // 0.30초 뒤
+
+//     // --- 잠시 쉬고 (______) 두 번째 묶음 반복 (띡-띡-띡) ---
+//     setTimeout(() => {
+//         playBeep();
+//         setTimeout(playBeep, 150);
+//         setTimeout(playBeep, 300);
+//     }, 1200); // 1.2초 뒤에 두 번째 묶음 시작
+// }
+
+function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.log(`Error: ${err.message}`);
+        });
+    }
+}
 
 // --- 추가된 UI 요소 ---
 const openSettingsBtn = document.getElementById('openSettingsBtn');
@@ -50,41 +112,109 @@ function setupGalleryEventListeners() {
 const channelState = new Map();
 
 /* --- 렌더링 함수 (기존과 동일, 없으면 추가) --- */
+// function renderBox(canvas, text) {
+//     const ctx = canvas.getContext('2d');
+//     if (!text) return;
+
+//     ctx.clearRect(0, 0, canvas.width, canvas.height);
+//     const lines = text.split('\n');
+
+//     lines.forEach(line => {
+//         const parts = line.trim().split(' ');
+//         if (parts.length >= 6) {
+//             // ... (좌표 변환 로직 동일) ...
+//             const isAlarm = parseInt(parts[0])
+//             const classId = parseInt(parts[1]);
+//             const x_center = parseFloat(parts[2]);
+//             const y_center = parseFloat(parts[3]);
+//             const w_norm = parseFloat(parts[4]);
+//             const h_norm = parseFloat(parts[5]);
+
+//             const boxW = w_norm * canvas.width;
+//             const boxH = h_norm * canvas.height;
+//             const boxX = (x_center * canvas.width) - (boxW / 2);
+//             const boxY = (y_center * canvas.height) - (boxH / 2);
+
+//             ctx.beginPath();
+//             ctx.lineWidth = 2;
+//             if (isAlarm > 0) {
+//                 ctx.fillStyle = '#FF0000';
+//                 ctx.strokeStyle = '#FF0000';
+//             } else {
+//                 ctx.fillStyle = '#00FF00';
+//                 ctx.strokeStyle = '#00FF00';
+//             }
+
+//             ctx.rect(boxX, boxY, boxW, boxH);
+//             ctx.stroke();
+//             ctx.save();
+
+//             ctx.font = 'bold 16px Arial';
+//             ctx.fillText(AlarmType[classId], boxX, boxY - 5);
+//             ctx.restore();
+//         }
+//     });
+// }
+
 function renderBox(canvas, text) {
     const ctx = canvas.getContext('2d');
     if (!text) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const lines = text.split('\n');
-    ctx.beginPath(); 
-    ctx.strokeStyle = '#00FF00';
-    ctx.lineWidth = 2;
-    
+
+    // 이번 프레임에서 알람이 발생했는지 체크하는 플래그
+    let frameHasAlarm = false;
+
     lines.forEach(line => {
         const parts = line.trim().split(' ');
-        if (parts.length >= 5) {
-            // ... (좌표 변환 로직 동일) ...
-            const classId = parts[0];
-            const x_center = parseFloat(parts[1]);
-            const y_center = parseFloat(parts[2]);
-            const w_norm = parseFloat(parts[3]);
-            const h_norm = parseFloat(parts[4]);
+        if (parts.length >= 6) {
+            const isAlarm = parseInt(parts[0]);
+            const classId = parseInt(parts[1]);
+            const x_center = parseFloat(parts[2]);
+            const y_center = parseFloat(parts[3]);
+            const w_norm = parseFloat(parts[4]);
+            const h_norm = parseFloat(parts[5]);
+
+            // 알람 객체가 하나라도 발견되면 플래그를 True로 설정
+            if (isAlarm > 0) {
+                frameHasAlarm = true;
+            }
 
             const boxW = w_norm * canvas.width;
             const boxH = h_norm * canvas.height;
             const boxX = (x_center * canvas.width) - (boxW / 2);
             const boxY = (y_center * canvas.height) - (boxH / 2);
 
-            ctx.rect(boxX, boxY, boxW, boxH);
-            
-            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+
+            // [수정 1] 경고 여부와 상관없이 박스는 항상 녹색
+            ctx.strokeStyle = '#00FF00';
             ctx.fillStyle = '#00FF00';
+
+            ctx.rect(boxX, boxY, boxW, boxH);
+            ctx.stroke();
+
+            ctx.save();
             ctx.font = 'bold 16px Arial';
-            ctx.fillText(`ID: ${classId}`, boxX, boxY - 5);
+            ctx.fillText(AlarmType[classId] || classId, boxX, boxY - 5);
             ctx.restore();
         }
     });
-    ctx.stroke(); 
+
+    // [수정 2] 알람 발생 시 부모 컨테이너(gallery-item)의 테두리 스타일 변경
+    // canvas의 부모 요소(.gallery-item)를 찾습니다.
+    const parentItem = canvas.parentElement;
+    if (parentItem) {
+        if (frameHasAlarm) {
+            parentItem.classList.add('alarm-active'); // 깜빡이는 테두리 추가
+            startAlarm();
+        } else {
+            parentItem.classList.remove('alarm-active'); // 테두리 제거
+            stopAlarm();
+        }
+    }
 }
 
 /* --- 메인 그리기 함수 (로직 수정됨) --- */
@@ -128,23 +258,28 @@ function drawBBox(canvas, txtUrl) {
                 if (state.emptyCount >= 2) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     state.lastText = ''; // 상태 초기화
+
+                    if (canvas.parentElement) {
+                        canvas.parentElement.classList.remove('alarm-active');
+                    }
+
                     // 카운트가 무한히 늘어나지 않게 고정
-                    if(state.emptyCount > 10) state.emptyCount = 2; 
+                    if (state.emptyCount > 10) state.emptyCount = 2;
                 }
-                
+
                 // 1번만 비어있는 경우(글리치 가능성)는 무시하고 함수 종료 (이전 박스 유지)
-                return; 
+                return;
             }
 
             // --- 데이터가 있는 경우 ---
-            
+
             state.emptyCount = 0; // 빈 카운트 리셋 (연속성 깨짐)
 
             // 내용이 이전과 같으면 그리지 않음 (CPU 절약)
             if (state.lastText === text) {
                 return;
             }
-            
+
             // 데이터 업데이트 및 그리기
             state.lastText = text;
             renderBox(canvas, text);
@@ -198,6 +333,12 @@ function updateGrid() {
                 iframe.onload = () => {
                     try {
                         const internalDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                        const style = internalDoc.createElement('style');
+                        style.textContent = `
+                            .mode { display: none !important; }
+                        `;
+                        internalDoc.head.appendChild(style);
 
                         // Go2RTC가 비디오 태그를 생성할 때까지 잠시 감시
                         const checkVideoInterval = setInterval(() => {
@@ -268,10 +409,10 @@ function updateGrid() {
 
                 if (txtUrl) {
                     // ... (캔버스 생성 및 스타일 설정 코드는 기존 유지) ...
-                    
+
                     // [수정 포인트] 랜덤 딜레이를 주어 네트워크 병목 해결
                     // 0 ~ 2000ms 사이의 랜덤한 시간 뒤에 반복 시작
-                    const randomDelay = Math.random() * 1000; 
+                    const randomDelay = Math.random() * 1000;
 
                     setTimeout(() => {
                         const drawInterval = setInterval(() => {
@@ -280,11 +421,11 @@ function updateGrid() {
                                 clearInterval(drawInterval);
                                 return;
                             }
-                            
+
                             // 프록시 혹은 로컬 경로 사용
                             // (이전에 설정한 경로 방식에 맞춰 사용하세요)
-                            drawBBox(canvas, txtUrl); 
-                            
+                            drawBBox(canvas, txtUrl);
+
                         }, 500); // 0.5초 주기
                     }, randomDelay);
                 }
@@ -354,8 +495,8 @@ document.addEventListener('DOMContentLoaded', updateGrid);
 
 // --- 기존 로그 및 알림 관련 코드 ---
 let counter = 0;
-const counterElement = document.getElementById('counter');
-const textBox = document.getElementById('textBox');
+// const counterElement = document.getElementById('counter');
+// const textBox = document.getElementById('textBox');
 let last_alarm = "";
 
 function updateCloseAllButtonVisibility() {
@@ -430,16 +571,27 @@ function createNotification(message) {
         notification.classList.add('show');
     }, 10);
 
-    notification.querySelector('.close-btn').onclick = () => {
+    const closeNotification = () => {
+        // 이미 닫히는 중이라면 중복 실행 방지
+        if (!notification.classList.contains('show')) return;
+
         notification.classList.remove('show');
         notification.addEventListener('transitionend', () => {
-            notification.remove();
+            if (notification.parentElement) {
+                notification.remove();
+            }
             updateCloseAllButtonVisibility();
         });
     };
 
+    notification.querySelector('.close-btn').onclick = () => closeNotification;
+
     container.scrollTop = container.scrollHeight;
     updateCloseAllButtonVisibility();
+
+    setTimeout(() => {
+        closeNotification();
+    }, 30000);
 }
 
 // 이미지 실시간 업데이트 로직
@@ -464,27 +616,36 @@ setInterval(() => {
             return response.text();
         })
         .then(text => {
-            textBox.innerHTML = '';
+            if (!text) return;
+            // textBox.innerHTML = '';
             let lines = text.split('\n');
-            if (lines.length > 50) {
-                lines = lines.slice(lines.length - 50);
-            }
+            // if (lines.length > 50) {
+            //     lines = lines.slice(lines.length - 50);
+            // }
 
-            lines.forEach(line => {
-                if (line.trim() !== '') {
-                    const lineElement = document.createElement('div');
-                    lineElement.className = 'text-line';
-                    lineElement.textContent = line;
-                    textBox.appendChild(lineElement);
-                }
-            });
+            // lines.forEach(line => {
+            //     if (line.trim() !== '') {
+            //         const lineElement = document.createElement('div');
+            //         lineElement.className = 'text-line';
+            //         lineElement.textContent = line;
+            //         textBox.appendChild(lineElement);
+            //     }
+            // });
 
-            textBox.scrollTop = textBox.scrollHeight;
+            // textBox.scrollTop = textBox.scrollHeight;
 
             const allAlarmsInLog = lines.filter(line => line.includes("ALARM"));
             if (allAlarmsInLog.length > 0) {
                 const lastAlarmIndex = last_alarm ? allAlarmsInLog.lastIndexOf(last_alarm) : -1;
                 const newAlarms = allAlarmsInLog.slice(lastAlarmIndex + 1);
+
+                if (newAlarms.length > 0) {
+                    // 소리 재생 (사용자 인터랙션이 없으면 브라우저가 막을 수 있음 예외처리)
+                    // playAlarmPattern();
+
+                    // 마지막 알람 상태 업데이트
+                    last_alarm = newAlarms[newAlarms.length - 1];
+                }
 
                 newAlarms.forEach(alarm => {
                     createNotification(alarm);
@@ -499,3 +660,17 @@ setInterval(() => {
             console.error('로그 파일 로딩 오류:', error);
         });
 }, 3000);
+
+document.addEventListener('keydown', (e) => {
+    // Shift 키를 누른 상태에서 'S' (대소문자 무관)를 눌렀을 때
+    if (e.shiftKey && (e.key === 'S' || e.key === 's')) {
+        // 이미 열려있으면 닫고, 닫혀있으면 엽니다.
+        if (settingsModal.style.display === 'block') {
+            settingsModal.style.display = 'none';
+            backdrop.style.display = 'none';
+        } else {
+            settingsModal.style.display = 'block';
+            backdrop.style.display = 'block';
+        }
+    }
+});
