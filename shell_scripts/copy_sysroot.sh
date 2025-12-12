@@ -50,6 +50,10 @@ ldd "$EXECUTABLE" | \
 
 
 
+# 7. 🚚 OpenCV 라이브러리 추가 복사
+echo ">>> Copying OpenCV libraries..."
+cp -vL /usr/local/lib/libopencv*.so* "$SDK_LIB_DIR"
+
 # 8. 📜 run.sh 스크립트 생성
 echo ">>> Creating run.sh..."
 cat << 'EOF' > "$SDK_ROOT_DIR/run.sh"
