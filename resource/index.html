@@ -16,6 +16,11 @@
             min-height: 100vh;
             background-color: #333333;
             padding: 0px 0;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body::-webkit-scrollbar {
+            display: none;
         }
 
         .gallery-container {
@@ -26,6 +31,12 @@
             max_height: 100%;
             width: 100%;
             box-sizing: border-box;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .gallery-container::-webkit-scrollbar {
+            display: none;
         }
 
         .gallery-item {
