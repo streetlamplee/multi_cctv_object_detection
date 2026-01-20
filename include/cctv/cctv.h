@@ -6,16 +6,15 @@
 #include "thread_safe/thread_safe_stack.h"
 #include "cctv/getFrame.h"
 
-class CCTV {
-    private:
-        std::string rtspURL;
-        ThreadSafeStack<cv::Mat>* image_stack;
-        cv::VideoCapture vicap;
+class CCTV
+{
+private:
+    std::string rtspURL;
+    ThreadSafeStack<cv::Mat> *image_stack;
+    cv::VideoCapture vicap;
 
-    public:
-        CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat>* stack);
-        
-        int start_image_capture();
+public:
+    CCTV(std::string rtspURL, ThreadSafeStack<cv::Mat> *stack);
 
-
+    int start_image_capture();
 };

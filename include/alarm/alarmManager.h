@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <deque>
+#include "global.h"
 
 extern Log log_handler;
 
@@ -19,7 +21,8 @@ public:
 
     void load_alarms_from_file(const std::string& file_path);
     int process_channel_alarms(int channel_id,
-                               const std::vector<int>& detected_classes,
+                               const std::vector<int> &detected_classes,
+                               const std::deque<detected_history_item>& detected_classes_history,
                                std::string camera_description,
                                std::string robotDestination);
     void set_cooltime(int cooltime);

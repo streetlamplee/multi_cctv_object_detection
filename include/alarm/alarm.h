@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <stack>
+#include "global.h"
 
 class Alarm{
 public:
@@ -42,4 +43,4 @@ private:
 
 };
 
-bool define_alarm (std::string condition, const std::vector<int>& detectedClass);
+bool define_alarm (std::string condition, const std::deque<detected_history_item> &detected_classes_history);
