@@ -24,15 +24,15 @@
 #include <cstdint>
 #include "global.h"
 #include <deque>
+#include "server/server.h"
 
 // --- Global Variables ---
-
+std::atomic<bool> mute_robot_signals[MAX_CHANNEL_NUM] = {
+    false,
+};
 cv::Mat g_canvas;
-
 bool g_running = true;
-
 AlarmManager g_alarm_manager; // 1106 hj modbus 적용
-
 int g_queueMaxSize = 5;
 sem_t *g_sem_image;
 sem_t *g_sem_inference;
@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
     // --- Initialization ---
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+    Server server;
 
     loadConfig();
 

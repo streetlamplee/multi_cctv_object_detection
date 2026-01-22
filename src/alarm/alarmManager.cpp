@@ -94,9 +94,9 @@ int AlarmManager::process_channel_alarms(int channel_id,
                 j["message"] = alarm_context[alarm.get_alarm_id() - 1];
                 j["created_at"] = time_stamp_str();
 
-                std::string payload = j.dump();
+                // std::string payload = j.dump();
 
-                MqttManager::getInstance().publish("CCTV/Alarm", payload);
+                MqttManager::getInstance().publish("CCTV/Alarm", j);
 
                 std::ofstream binfile("./resource/id.bin", std::ios::binary);
                 if (binfile.is_open())

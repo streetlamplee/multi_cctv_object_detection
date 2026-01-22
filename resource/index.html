@@ -19,6 +19,7 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
         body::-webkit-scrollbar {
             display: none;
         }
@@ -28,13 +29,13 @@
             gap: 5px;
             padding: 5px;
             max-width: 100%;
-            max_height: 100%;
+            max-height: 100%;
             width: 100%;
             box-sizing: border-box;
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        
+
         .gallery-container::-webkit-scrollbar {
             display: none;
         }
@@ -415,6 +416,56 @@
             /* 원래 있던 스타일들은 그대로 두셔도 되고, 다 지워도 됩니다. */
             /* 핵심: 화면에서 버튼 숨기기 */
             display: none !important;
+        }
+
+        /* index.html 내 해당 부분 수정 */
+        .robot-control-overlay {
+            display: none;
+            position: absolute;
+
+            bottom: 40px !important;
+            right: 20px !important;
+
+            /* 배경 및 디자인 */
+            background-color: rgba(0, 0, 0, 0.8);
+            /* 배경을 조금 더 진하게 */
+            color: white;
+            padding: 12px 18px;
+            /* 안쪽 여백을 넉넉히 */
+            border-radius: 8px;
+            /* 사방을 둥글게 하여 가독성 높임 */
+
+            z-index: 1050;
+            /* 최상단 유지 */
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+
+            /* [추가] 글자가 잘리거나 줄바꿈되지 않게 방지 */
+            white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            /* 가독성을 위한 그림자 */
+        }
+
+        /* 갤러리 아이템이 확대(focused)되었을 때만 표시 */
+        .gallery-item.focused .robot-control-overlay {
+            display: flex;
+        }
+
+        /* 체크박스 크기 조절 */
+        .robot-control-overlay input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        /* 라벨 텍스트 스타일 */
+        .robot-control-overlay label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            /* 텍스트 선택 방지 */
         }
     </style>
 </head>

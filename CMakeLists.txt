@@ -31,6 +31,7 @@ add_executable(app
     src/config/ini.c
     src/config/INIReader.cpp
     src/mqttManager/mqttManager.cpp
+    src/server/server.cpp
 )
 
 target_include_directories(app PRIVATE
