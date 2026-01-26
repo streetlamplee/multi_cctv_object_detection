@@ -144,10 +144,10 @@ function renderBox(canvas, text) {
     if (parentItem) {
         if (frameHasAlarm) {
             parentItem.classList.add('alarm-active'); // 깜빡이는 테두리 추가
-            startAlarm();
+            // startAlarm();
         } else {
             parentItem.classList.remove('alarm-active'); // 테두리 제거
-            stopAlarm();
+            // stopAlarm();
         }
     }
 }
