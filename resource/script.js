@@ -287,17 +287,13 @@ function updateGrid() {
 
         // --- 이하 기존 영상 처리 로직 ---
         let rawInput = imageUrls[i] ? imageUrls[i].trim() : '';
-        let [videoUrl, txtUrl] = rawInput.split(',').map(s => s.trim());
-
-        if (videoUrl) {
-            if (videoUrl.startsWith('rtsp://')) {
+        let [sourceUrl, txtUrl] = rawInput.split(',').map(s => s.trim());
+        if (sourceUrl) {
+            if (sourceUrl.startsWith('rtsp://')) {
                 item.classList.add('stream-mode');
                 const iframe = document.createElement('iframe');
-                iframe.src = `/stream/stream.html?src=${encodeURIComponent(videoUrl)}&mode=webrtc`;
+                iframe.src = `/stream/stream.html?src=${encodeURIComponent(sourceUrl)}&mode=webrtc`;
                 iframe.classList.add('stream-iframe');
-
-                // ... (중략: iframe 스타일 및 onload 로직) ...
-
                 item.appendChild(iframe);
 
                 if (txtUrl) {
@@ -312,9 +308,26 @@ function updateGrid() {
                         }
                         drawBBox(canvas, txtUrl);
                     }, 500);
+
                 }
             }
-            // ... (나머지 m3u8, img 처리 로직) ...
+            else if (sourceUrl.toLowerCase().indexOf('.jpg') !== -1) {
+                // --- [A] 이미지 모드 ---
+                const img = document.createElement('img');
+                img.src = sourceUrl;
+                // 캐싱 방지용 파라미터는 아래 setInterval에서 처리함
+                item.appendChild(img);
+            }
+            else {
+                const img = document.createElement('img');
+                // 1x1 픽셀 검정색 Base64 이미지
+                img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.backgroundColor = 'black'; // 이중 안전장치
+                item.appendChild(img);
+            }
         } else {
             item.classList.add('empty');
         }
@@ -472,8 +485,10 @@ setInterval(() => {
     const allImages = document.querySelectorAll('.gallery-item:not(.empty) > img');
 
     allImages.forEach(img => {
-        let originalSrc = img.src.split('?')[0];
-        img.src = `${originalSrc}?t=${timestamp}`;
+        if (!img.src.startsWith('data:')) {
+            let originalSrc = img.src.split('?')[0];
+            img.src = `${originalSrc}?t=${timestamp}`;
+        }
     });
 }, 200); // 200ms 주기는 이미지에만 적용됨
 

@@ -8,8 +8,7 @@ MqttManager::~MqttManager()
     delete client_;
 }
 
-void MqttManager::connect(const std::string &address, const std::string &clientID, const std::string &userID, const std::string &password)
-{
+void MqttManager::connect() {
     if (client_)
     {
         std::cout << "[MQTT] Already connected" << std::endl;
@@ -18,12 +17,46 @@ void MqttManager::connect(const std::string &address, const std::string &clientI
 
     try
     {
-        client_ = new mqtt::async_client(address, clientID);
+        this->client_ = new mqtt::async_client(this->address, this->clientID);
+        mqtt::connect_options connOpts;
+        connOpts.set_keep_alive_interval(20);
+        connOpts.set_clean_session(true);
+        connOpts.set_user_name(this->userID);
+        connOpts.set_password(this->password);
+
+        std::cout << "[MQTT] 브로커 연결 시도" << std::endl;
+        client_->connect(connOpts)->wait();
+        std::cout << "[MQTT] 연결 성공" << std::endl;
+    }
+    catch (const mqtt::exception &exc)
+    {
+        std::cerr << "[MQTT]] 연결 실패" << std::endl;
+    }
+}
+
+void MqttManager::connect(const std::string &address, const std::string &clientID, const std::string &userID, const std::string &password)
+{
+    if (client_)
+    {
+        std::cout << "[MQTT] Already connected" << std::endl;
+        return;
+    }
+
+    this->address = address;
+    this->clientID = clientID;
+    this->userID = userID;
+    this->password = password;
+
+    try
+    {
+        this->client_ = new mqtt::async_client(address, clientID);
         mqtt::connect_options connOpts;
         connOpts.set_keep_alive_interval(20);
         connOpts.set_clean_session(true);
         connOpts.set_user_name(userID);
         connOpts.set_password(password);
+
+        connOpts.set_automatic_reconnect(1, 10);
 
         std::cout << "[MQTT] 브로커 연결 시도" << std::endl;
         client_->connect(connOpts)->wait();

@@ -276,7 +276,7 @@
             /* 화면 너비의 80% 사용 */
             max-width: 100%;
             /* 너무 커지지 않게 최대폭 제한 */
-            height: auto;
+            max-height: 100vh;
             /* 높이는 자동 */
             /* aspect-ratio: 16 / 9;   */
 
@@ -320,7 +320,7 @@
             border-radius: 8px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
             width: 90vw;
-            max-width: 600px;
+            max-width: 1200px;
         }
 
         .modal-panel .controls {
@@ -423,8 +423,8 @@
             display: none;
             position: absolute;
 
-            bottom: 40px !important;
-            right: 20px !important;
+            bottom: 10px !important;
+            right: 10px !important;
 
             /* 배경 및 디자인 */
             background-color: rgba(0, 0, 0, 0.8);
@@ -480,6 +480,7 @@
                 <h2>그리드 설정</h2>
                 <button id="closeSettingsBtn" class="close-btn">&times;</button>
             </div>
+
             <label for="colsInput">가로:</label>
             <input type="number" id="colsInput" value="4" min="1">
             <label for="rowsInput">세로:</label>
