@@ -41,6 +41,9 @@ const char *infer_sem_name = "/inference";
 std::string log_path = "./resource/app.log";
 INIReader *ini_reader;
 Log log_handler(log_path, 50);
+inference_module g_infer_mod;
+
+
 // fileserver fs;       // nginx 사용으로 인해 사용하지 않음
 
 // Developer Option : 데이터 저장 설정을 ini로 빼둠;
@@ -49,7 +52,7 @@ const unsigned int duration_between_data = 300;
 
 struct CameraChannel;
 void log_worker();
-void routine(CameraChannel *channel, std::string net_path);
+void routine(CameraChannel *channel);
 void signal_handler(int signum);
 void loadConfig();
 
@@ -88,8 +91,9 @@ int main(int argc, char *argv[])
     Server server;
 
     loadConfig();
+    g_infer_mod.inference_init("./resource/best.rknn");
 
-    std::string onnx_path = "./resource/yolov8n.quant.onnx";
+    // std::string onnx_path = "./resource/yolov8n.quant.onnx";
     std::string config_path = "./resource/alarm.conf";
     std::string ini_path = "./resource/app.ini";
 
@@ -122,7 +126,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     sem_unlink(infer_sem_name);
-    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 6);
+    g_sem_inference = sem_open(infer_sem_name, O_CREAT, 0644, 1);
     if (g_sem_inference == SEM_FAILED)
     {
         std::cerr << "sem_open failed (inference)" << std::endl;
@@ -143,6 +147,8 @@ int main(int argc, char *argv[])
     {
         channels.push_back(std::make_unique<CameraChannel>());
     }
+    
+    std::cout << "camera vector init" << std::endl;
 
     // IMPORTANT: Set the correct RTSP URL for each camera "rtsp://admin:q1w2e3r4@192.168.1.100:554/Streaming/Channels/202/"
     for (int i = 1; i <= std::stoi(ini_reader->Get("Window Configuration", "total_window_count", "12")); i++)
@@ -156,11 +162,15 @@ int main(int argc, char *argv[])
         channels[i - 1]->robotDestination = ini_reader->Get("Robot Destination", "Camera" + std::to_string(i), "Unknown");
     }
 
+    std::cout << "camera channel done" << std::endl;
+
     log_handler.push(Log::Level::INFO, "프로그램 설정 완료. 프로그램 실행", 0);
     //~ channels[0]->routine_thread = std::thread(routine, channels[0].get(), onnx_path);
     for (auto &channel : channels)
     {
-        channel->routine_thread = std::thread(routine, channel.get(), onnx_path);
+        channel->routine_thread = std::thread(routine, channel.get());
+        std::cout<<channel->CameraChannelID<<"번 thread 실행" << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 
     std::thread log_thread(log_worker);
@@ -213,7 +223,7 @@ void log_worker()
     }
 }
 
-void routine(CameraChannel *channel, std::string net_path)
+void routine(CameraChannel *channel)
 {
     std::string data_gathering_point = ini_reader->Get("Developer Option", "data_gathering_point", "./data");
     std::stringstream l;
@@ -232,22 +242,13 @@ void routine(CameraChannel *channel, std::string net_path)
     // std::string now_alarm_condition = ""; // 1106 hj modbus 적용
     // int alarm_timeout = 0; // 1106 hj modbus 적용
     std::stringstream net_result;
-    cv::dnn::Net net = cv::dnn::readNet(net_path);
-    if (net.empty())
-    {
-        std::cerr << "Error: Cannot load ONNX model" << std::endl;
-        log_handler.push(Log::Level::ERROR, "Cannot load ONNX model", channel->CameraChannelID);
-        return;
-    }
-    net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
     // 0911 bottleneck test
-    bool test = false;
-    if (channel->CameraChannelID == 1)
-    {
-        test = false;
-    }
+    // bool test = false;
+    // if (channel->CameraChannelID == 1)
+    // {
+    //     test = false;
+    // }
     auto start = std::chrono::high_resolution_clock::now();
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff;
@@ -267,7 +268,7 @@ void routine(CameraChannel *channel, std::string net_path)
         // int risk_level = 0; // 1106 hj modbus 적용
 
         channel->detected_class.clear();
-        if (frame.empty() || !g_running)
+        if (frame.empty() || sub_frame.empty() || !g_running)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             continue;
@@ -281,10 +282,10 @@ void routine(CameraChannel *channel, std::string net_path)
 
         sem_wait(g_sem_inference);
         cv::cvtColor(sub_frame, frame_rgb, cv::COLOR_BGR2RGB);
-        auto results = inference(net, frame_rgb);
-        sem_post(g_sem_inference);
 
-        // channel->results_queue.push(results);
+
+        auto results = g_infer_mod.inference(frame_rgb);
+        sem_post(g_sem_inference);
         for (auto &det : results)
         {
             channel->detected_class.push_back(det.classID);
@@ -442,13 +443,13 @@ void routine(CameraChannel *channel, std::string net_path)
         // 0919 thread elapsed time 체크
         auto thread_end = std::chrono::high_resolution_clock::now();
 
-        if (test)
-        {
-            auto thread_diff = thread_end - thread_start;
-            std::cout << "thread elapsed time : " << thread_diff.count() << std::endl;
-        }
+        // if (test)
+        // {
+        //     auto thread_diff = thread_end - thread_start;
+        //     std::cout << "thread elapsed time : " << thread_diff.count() << std::endl;
+        // }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 }
 
