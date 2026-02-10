@@ -1,0 +1,1 @@
+rknn 폴더에 best.pt를 옮겨놓고 폴더 내의 convert.sh를 실행할 것
