@@ -163,3 +163,8 @@ output/
 dev/
 app/
 build*
+*.png
+*.jpg
+*/.venv
+rknn-venv
+export-onnx

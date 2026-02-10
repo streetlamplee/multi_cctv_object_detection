@@ -15,7 +15,8 @@ pkg_check_modules(MODBUS REQUIRED libmodbus)
 add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
 message(STATUS "Found OpenCV version: ${OpenCV_VERSION}")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g")
 add_executable(app 
     src/main.cpp
     src/cctv/cctv.cpp
@@ -32,15 +33,19 @@ add_executable(app
     src/config/INIReader.cpp
     src/mqttManager/mqttManager.cpp
     src/server/server.cpp
+    # src/inference/rknn.cpp
 )
 
 target_include_directories(app PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/lib
     ${CMAKE_SOURCE_DIR}/lib/json
     ${CMAKE_SOURCE_DIR}/lib/cpp-httplib
+    ${CMAKE_SOURCE_DIR}/sysroot
     ${OpenCV_INCLUDE_DIRS}
     ${OPENSSL_INCLUDE_DIRS}
+    /usr/local/include
 )
 
 target_link_libraries(app PRIVATE
@@ -50,4 +55,5 @@ target_link_libraries(app PRIVATE
     Threads::Threads
     PahoMqttCpp::paho-mqttpp3
     nlohmann_json::nlohmann_json
+    rknnrt
 )
