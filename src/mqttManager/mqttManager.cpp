@@ -90,17 +90,24 @@ void MqttManager::publish(const std::string &topic, const nlohmann::json &payloa
         std::cerr << "[MQTT] 오류: 연결되지 않아서 보낼 수 없습니다." << std::endl;
         return;
     }
-    if (mute_robot_signals[(int)(payload["camera_id"])])
+
+    // camera_id가 있을 때만 mute 체크 수행
+    if (payload.contains("camera_id") && payload["camera_id"].is_number())
     {
-        return;
+        int cam_id = payload["camera_id"].get<int>();
+        constexpr int MUTE_ARR_SIZE = sizeof(mute_robot_signals) / sizeof(mute_robot_signals[0]);
+        if (cam_id >= 0 && cam_id < MUTE_ARR_SIZE && mute_robot_signals[cam_id])
+        {
+            return;
+        }
     }
+
     try
     {
-        // QoS 1로 메시지 생성 및 전송
         std::string pl = payload.dump();
         mqtt::message_ptr pubmsg = mqtt::make_message(topic, pl);
         pubmsg->set_qos(1);
-        client_->publish(pubmsg)->wait_for(std::chrono::seconds(2)); // 2초 타임아웃
+        client_->publish(pubmsg)->wait_for(std::chrono::seconds(2));
     }
     catch (const mqtt::exception &exc)
     {
