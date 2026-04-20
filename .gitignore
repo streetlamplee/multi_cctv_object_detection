@@ -163,3 +163,5 @@ output/
 dev/
 app/
 build*
+scripts/
+lib/rknn_toolkit2/
