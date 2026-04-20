@@ -120,11 +120,11 @@ bool define_alarm(std::string condition, const std::deque<detected_history_item>
     }
     bool res = true;
 
-    int frames_to_check = static_cast<int>(persist_seconds);
-    if (frames_to_check < 1)
-        frames_to_check = 1;
+    int size = history_result.size();
+    if (size < frames_to_check)
+        return false;
 
-    for (int i = 0; i < history_result.size() && i < frames_to_check; i++)
+    for (int i = size - frames_to_check; i < size; i++)
     {
         if (!history_result[i])
         {

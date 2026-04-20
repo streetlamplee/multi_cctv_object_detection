@@ -7,6 +7,7 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <atomic>
 #include <semaphore.h>
 #include <chrono>
 #include <time.h>
@@ -174,11 +175,13 @@ int main(int argc, char *argv[])
     std::thread staff_thread(staff_report_routine, std::cref(channels));
     std::cout << "staff report thread 실행" << std::endl;
 
+
     for (auto &channel : channels)
     {
         channel->routine_thread.join();
     }
     log_thread.join();
+    staff_thread.join();
     staff_thread.join();
 
     std::cout << "[Main] Server thread 종료 완료. semaphore unlink 시도..." << std::endl;
@@ -361,9 +364,13 @@ void routine(CameraChannel *channel, std::string net_path)
         {
             color_anchor = cv::Scalar(0, 0, 255); // 빨간색
             isAlarm = 1;
+            color_anchor = cv::Scalar(0, 0, 255); // 빨간색
+            isAlarm = 1;
         }
         else
         {
+            color_anchor = cv::Scalar(0, 255, 0); // 녹색
+            isAlarm = 0;
             color_anchor = cv::Scalar(0, 255, 0); // 녹색
             isAlarm = 0;
         }
