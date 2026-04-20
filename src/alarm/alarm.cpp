@@ -67,7 +67,7 @@ int Alarm::get_id()
     return this->id;
 }
 
-bool define_alarm(std::string condition, const std::deque<detected_history_item> &detected_classes_history)
+bool define_alarm(std::string condition, const std::deque<detected_history_item> &detected_classes_history, double persist_seconds)
 {
     if (condition.empty())
     {
@@ -131,7 +131,7 @@ bool define_alarm(std::string condition, const std::deque<detected_history_item>
             res = res && history_result[i];
             break;
         }
-        if (diff_timer >= 5.0f)
+        if (diff_timer >= persist_seconds)
         {
             break;
         }

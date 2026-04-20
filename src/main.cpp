@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <mutex>
+#include <atomic>
 #include <semaphore.h>
 #include <chrono>
 #include <time.h>
@@ -36,6 +37,7 @@ AlarmManager g_alarm_manager; // 1106 hj modbus 적용
 int g_queueMaxSize = 5;
 sem_t *g_sem_image;
 sem_t *g_sem_inference;
+int g_staff_report_interval_sec = 5;
 const char *get_image_sem_name = "/get_image";
 const char *infer_sem_name = "/inference";
 std::string log_path = "./resource/app.log";
@@ -49,6 +51,7 @@ const unsigned int duration_between_data = 300;
 
 struct CameraChannel;
 void log_worker();
+void staff_report_routine(const std::vector<std::unique_ptr<CameraChannel>> &channels);
 void routine(CameraChannel *channel, std::string net_path);
 void signal_handler(int signum);
 void loadConfig();
@@ -65,6 +68,7 @@ struct CameraChannel
     std::deque<detected_history_item> detected_class_history;
     std::vector<int> detected_class;
     int alarm = 0;
+    std::atomic<int> current_staff_count{0};
     std::thread routine_thread;
 
     // Constructor to initialize the ROI
@@ -88,6 +92,7 @@ int main(int argc, char *argv[])
     Server server;
 
     loadConfig();
+    g_staff_report_interval_sec = std::stoi(ini_reader->Get("staff_report", "interval_sec", "5"));
 
     std::string onnx_path = "./resource/yolov8n.quant.onnx";
     std::string config_path = "./resource/alarm.conf";
@@ -97,6 +102,7 @@ int main(int argc, char *argv[])
     // read_ini(ini_path, g_ini);
     g_alarm_manager.load_alarms_from_file(config_path); // 1106 hj modbus 적용
     g_alarm_manager.set_cooltime(std::stoi(ini_reader->Get("Alarm Context", "AlarmCooltime", "180")));
+    g_alarm_manager.set_persist_time(std::stof(ini_reader->Get("Alarm Context", "AlarmPersistTime", "5.0")));
 
     log_handler.load();
 
@@ -164,12 +170,15 @@ int main(int argc, char *argv[])
     }
 
     std::thread log_thread(log_worker);
+    std::thread staff_thread(staff_report_routine, std::cref(channels));
+    std::cout << "staff report thread 실행" << std::endl;
 
     for (auto &channel : channels)
     {
         channel->routine_thread.join();
     }
     log_thread.join();
+    staff_thread.join();
 
     std::cout << "[Main] Server thread 종료 완료. semaphore unlink 시도..." << std::endl;
     log_handler.push(Log::Level::INFO, "모든 thread 종료 완료. semaphore unlink 시작", 0);
@@ -210,6 +219,33 @@ void log_worker()
         }
         heartbit = !heartbit;
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+    }
+}
+
+void staff_report_routine(const std::vector<std::unique_ptr<CameraChannel>> &channels)
+{
+    while (g_running)
+    {
+        // 종료 응답성을 위해 1초 단위로 쪼갬
+        for (int i = 0; i < g_staff_report_interval_sec && g_running; i++)
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        if (!g_running)
+            break;
+
+        nlohmann::json j;
+        j["entries"] = nlohmann::json::array();
+        for (const auto &channel : channels)
+        {
+            int cnt = channel->current_staff_count.load(std::memory_order_relaxed);
+            j["entries"].push_back({{"camera_id", channel->CameraChannelID},
+                                    {"destination", channel->robotDestination},
+                                    {"staff_count", cnt}});
+        }
+        j["timestamp"] = time_stamp_str();
+
+        MqttManager::getInstance().publish("CCTV/StaffCount", j);
     }
 }
 
@@ -292,6 +328,16 @@ void routine(CameraChannel *channel, std::string net_path)
         channel->detected_class_history.push_back({std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()),
                                                    channel->detected_class});
 
+        int staff_cnt = 0;
+        for (int cls : channel->detected_class)
+        {
+            if (cls == AlarmManager::STAFF_CLASS_ID)
+            {
+                staff_cnt++;
+            }
+        }
+        channel->current_staff_count.store(staff_cnt, std::memory_order_relaxed);
+
         if (channel->detected_class_history.size() >= 20)
         {
             channel->detected_class_history.pop_front();
@@ -308,15 +354,17 @@ void routine(CameraChannel *channel, std::string net_path)
         // cv::Scalar color_boundary;
 
         uint8_t isAlarm;
-        if (channel->alarm == 0)
+        bool channel_is_active = g_alarm_manager.is_channel_active(channel->CameraChannelID);
+
+        if (channel_is_active)
         {
-            color_anchor = cv::Scalar(0, 255, 0);
-            isAlarm = 0;
+            color_anchor = cv::Scalar(0, 0, 255); // 빨간색
+            isAlarm = 1;
         }
         else
         {
-            color_anchor = cv::Scalar(0, 0, 255);
-            isAlarm = 1;
+            color_anchor = cv::Scalar(0, 255, 0); // 녹색
+            isAlarm = 0;
         }
 
         // alarm 테두리 빨간 색 처리 코드
