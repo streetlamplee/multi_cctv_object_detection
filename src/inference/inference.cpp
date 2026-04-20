@@ -13,7 +13,9 @@ std::vector<BBoxInfo> inference(cv::dnn::Net net, cv::Mat image) {
         "sitting on the floor",
         "food tray",
         "perch on bed", 
-        "staff"
+        "staff",
+        "Standing on bed",
+        "jump over"
     };
 
     // 1120 hj letterbox 처리를 하지 않고 직사각형으로 추론하도록 설정
