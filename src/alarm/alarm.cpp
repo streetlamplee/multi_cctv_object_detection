@@ -119,20 +119,16 @@ bool define_alarm(std::string condition, const std::deque<detected_history_item>
         history_result.push_back(value_stack.top());
     }
     bool res = true;
-    for (int i = 0; i < history_result.size(); i++)
-    {
-        auto item = detected_classes_history[history_result.size() - 1 - i];
-        auto now = std::chrono::system_clock::now();
-        std::time_t t = std::chrono::system_clock::to_time_t(now);
-        double diff_timer = difftime(item.time, t);
 
+    int frames_to_check = static_cast<int>(persist_seconds);
+    if (frames_to_check < 1)
+        frames_to_check = 1;
+
+    for (int i = 0; i < history_result.size() && i < frames_to_check; i++)
+    {
         if (!history_result[i])
         {
-            res = res && history_result[i];
-            break;
-        }
-        if (-diff_timer >= persist_seconds)
-        {
+            res = false;
             break;
         }
     }
