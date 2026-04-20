@@ -31,6 +31,24 @@ Server::Server()
         res.set_content("Bad request", "text/plain");
     } });
 
+    this->svr.Get("/api/robot-control", [](const httplib::Request &req, httplib::Response &res)
+                  {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    
+    nlohmann::json j;
+    j["states"] = nlohmann::json::array();
+    
+    // 1-based 인덱싱 유지 (다른 코드와 일관성)
+    for (int ch = 1; ch <= MAX_CHANNEL_NUM; ch++)
+    {
+        j["states"].push_back({
+            {"channel", ch},
+            {"muted", (bool)mute_robot_signals[ch]}
+        });
+    }
+    
+    res.set_content(j.dump(), "application/json"); });
+
     // ★ CORS preflight(OPTIONS) 대응
     this->svr.Options("/api/robot-control", [](const httplib::Request &, httplib::Response &res)
                       {

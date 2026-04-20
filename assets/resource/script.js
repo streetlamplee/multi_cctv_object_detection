@@ -154,20 +154,29 @@ function renderBox(canvas, text) {
     }
 }
 
-async function sendRobotSignalStatus(channelId, isMuted) {
+async function fetchRobotSignalStates() {
     try {
-        // 실제 운영 환경의 서버 주소로 변경 필요 (예: http://localhost:8080/api/robot-control)
-        const response = await fetch('http://localhost:8081/api/robot-control', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                channel: channelId,
-                muteSignal: isMuted
-            })
+        const response = await fetch(`http://${window.location.hostname}:8081/api/robot-control`);
+        if (!response.ok) {
+            console.error('로봇 상태 조회 실패:', response.status);
+            return;
+        }
+        const data = await response.json();
+
+        data.states.forEach(state => {
+            const ch = state.channel;
+            const muted = state.muted;
+
+            // 체크박스 동기화
+            const checkbox = document.getElementById(`mute_robot_${ch - 1}`);
+            if (checkbox) checkbox.checked = muted;
+
+            // 동그라미 동기화
+            const dot = document.getElementById(`robot_status_${ch}`);
+            if (dot) dot.classList.toggle('muted', muted);
         });
-        console.log(`채널 ${channelId} 신호 차단 상태: ${isMuted}`);
     } catch (err) {
-        console.error("서버 통신 실패:", err);
+        console.error('로봇 상태 조회 실패:', err);
     }
 }
 
@@ -279,6 +288,7 @@ function updateGrid() {
         checkbox.addEventListener('change', (e) => {
             const isMuted = e.target.checked;
             sendRobotSignalStatus(i + 1, isMuted);
+            statusDot.classList.toggle('muted', isMuted);
         });
 
         overlay.appendChild(checkbox);
@@ -286,6 +296,11 @@ function updateGrid() {
 
         // 3. item에 overlay를 추가합니다.
         item.appendChild(overlay);
+
+        const statusDot = document.createElement('div');
+        statusDot.className = 'robot-status-dot';
+        statusDot.id = `robot_status_${i + 1}`;  // 1-based (서버 채널 번호와 일치)
+        item.appendChild(statusDot);
 
         // --- 이하 기존 영상 처리 로직 ---
         let rawInput = imageUrls[i] ? imageUrls[i].trim() : '';
@@ -338,6 +353,7 @@ function updateGrid() {
         galleryContainer.appendChild(item);
     }
     setupGalleryEventListeners();
+    fetchRobotSignalStates();  // 서버 상태로 UI 동기화
 }
 
 // --- 이벤트 리스너 설정 ---

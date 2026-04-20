@@ -5,7 +5,7 @@
 #include <vector>
 #include <atomic>
 
-#define MAX_CHANNEL_NUM 4
+#define MAX_CHANNEL_NUM 16
 
 struct detected_history_item
 {
