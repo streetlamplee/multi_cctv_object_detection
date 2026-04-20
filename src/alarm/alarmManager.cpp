@@ -20,12 +20,27 @@ AlarmManager::AlarmManager()
     }
 }
 
+AlarmManager::AlarmManager(float persist_time, int cooltime) : persist_time(persist_time), cooltime(cooltime)
+{
+    std::ifstream file("./resource/id.bin", std::ios::binary);
+    if (file.is_open())
+    {
+        file.read(reinterpret_cast<char *>(&this->id), sizeof(this->id));
+        file.close();
+    }
+}
+
 // 1106 hj modbus 적용
 AlarmManager::~AlarmManager() {}
 
 void AlarmManager::set_cooltime(int cooltime)
 {
     this->cooltime = cooltime;
+}
+
+void AlarmManager::set_persist_time(float persist_time)
+{
+    this->persist_time = persist_time;
 }
 
 void AlarmManager::start_cooldown(int channel_id)
@@ -37,17 +52,48 @@ void AlarmManager::start_cooldown(int channel_id)
 bool AlarmManager::is_on_cooldown(int channel_id)
 {
     std::lock_guard<std::mutex> lock(cooldown_mutex);
-    if (channel_cooldowns.count(channel_id))
+    auto it = channel_cooldowns.find(channel_id);
+    if (it != channel_cooldowns.end())
     {
         auto now = std::chrono::steady_clock::now();
-        auto cooldown_start = channel_cooldowns.at(channel_id);
-        auto cooldown_duration = std::chrono::minutes(3); // 180초 쿨다운
-        if (now - cooldown_start < cooldown_duration)
+        auto cooldown_duration = std::chrono::seconds(this->cooltime);
+        if (now - it->second < cooldown_duration)
         {
-            return true; // 쿨다운 상태
+            return true;
+        }
+        channel_cooldowns.erase(it);
+    }
+    return false;
+}
+
+bool AlarmManager::is_staff_detected(const std::vector<int> &detected_classes)
+{
+    for (int cls : detected_classes)
+    {
+        if (cls == STAFF_CLASS_ID)
+        {
+            return true;
         }
     }
-    return false; // 쿨다운 상태 아님
+    return false;
+}
+
+bool AlarmManager::is_channel_active(int channel_id)
+{
+    std::lock_guard<std::mutex> lock(active_mutex);
+    return active_channels.count(channel_id) > 0;
+}
+
+void AlarmManager::cancel_alarm(int channel_id)
+{
+    {
+        std::lock_guard<std::mutex> lock(active_mutex);
+        active_channels.erase(channel_id);
+    }
+
+    std::string log_msg = "Alarm cancelled by staff detection (channel " + std::to_string(channel_id) + ")";
+    log_handler.push(Log::Level::INFO, log_msg, channel_id);
+    std::cout << "INFO: " << log_msg << std::endl;
 }
 
 // 1106 hj modbus 적용
@@ -69,6 +115,31 @@ int AlarmManager::process_channel_alarms(int channel_id,
                                          std::string camera_description,
                                          std::string robotDestination)
 {
+    if (is_staff_detected(detected_classes))
+    {
+        bool can_cancel_active = false;
+        {
+            std::lock_guard<std::mutex> lock(active_mutex);
+            auto it = active_channels.find(channel_id);
+            if (it != active_channels.end())
+            {
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = now - it->second;
+                // 알람 발생 후 grace period가 지났을 때만 취소 허용
+                if (elapsed >= std::chrono::seconds(ALARM_GRACE_PERIOD_SEC))
+                {
+                    can_cancel_active = true;
+                }
+            }
+        }
+
+        if (can_cancel_active)
+        {
+            cancel_alarm(channel_id);
+            return 0;
+        }
+    }
+
     // 쿨다운 상태이거나 이미 알람이 활성화된 경우, 새로운 알람을 확인하지 않음
     if (is_on_cooldown(channel_id))
     {
@@ -80,7 +151,7 @@ int AlarmManager::process_channel_alarms(int channel_id,
     {
         if (alarm.get_target_channel() == channel_id)
         {
-            if (define_alarm(alarm.get_condition(), detected_classes_history))
+            if (define_alarm(alarm.get_condition(), detected_classes_history, this->persist_time))
             {
 
                 json j;
@@ -115,6 +186,11 @@ int AlarmManager::process_channel_alarms(int channel_id,
                 std::string log_msg = alarm.get_alarm_sentence();
                 log_handler.push(Log::Level::ALARM, log_msg, channel_id);
                 std::cout << "WARNING: " << log_msg << std::endl;
+
+                {
+                    std::lock_guard<std::mutex> lock(active_mutex);
+                    active_channels[channel_id] = std::chrono::steady_clock::now();
+                }
 
                 start_cooldown(channel_id);
                 return 1;

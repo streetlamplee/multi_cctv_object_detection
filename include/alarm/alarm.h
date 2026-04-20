@@ -43,4 +43,4 @@ private:
 
 };
 
-bool define_alarm (std::string condition, const std::deque<detected_history_item> &detected_classes_history);
+bool define_alarm (std::string condition, const std::deque<detected_history_item> &detected_classes_history, double persist_seconds = 5.0);
