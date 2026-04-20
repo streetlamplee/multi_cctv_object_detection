@@ -13,7 +13,7 @@ Server::Server()
         int ch = j["channel"];
         bool mute = j["muteSignal"];
         
-        if (ch < 1 || ch > MAX_CHANNEL_NUM)
+        if (ch < 1 || ch >= MAX_CHANNEL_NUM)
         {
             std::cerr << "[SERVER] 잘못된 채널 번호: " << ch << std::endl;
             res.status = 400;
@@ -39,7 +39,7 @@ Server::Server()
     j["states"] = nlohmann::json::array();
     
     // 1-based 인덱싱 유지 (다른 코드와 일관성)
-    for (int ch = 1; ch <= MAX_CHANNEL_NUM; ch++)
+    for (int ch = 1; ch < MAX_CHANNEL_NUM; ch++)
     {
         j["states"].push_back({
             {"channel", ch},

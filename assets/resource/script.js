@@ -135,7 +135,20 @@ function renderBox(canvas, text) {
 
             ctx.save();
             ctx.font = 'bold 16px Arial';
-            ctx.fillText(AlarmType[classId] || classId, boxX, boxY - 5);
+
+            const textHeight = 20;  // 대략 폰트 크기 + 여유
+            const labelText = AlarmType[classId] || classId;
+
+            let textY;
+            if (boxY - 5 < textHeight) {
+                // 박스가 위에 붙어있으면 박스 아래로
+                textY = boxY + boxH + textHeight - 5;
+            } else {
+                // 기본: 박스 위
+                textY = boxY - 5;
+            }
+
+            ctx.fillText(labelText, boxX, textY);
             ctx.restore();
         }
     });
@@ -156,7 +169,7 @@ function renderBox(canvas, text) {
 
 async function fetchRobotSignalStates() {
     try {
-        const response = await fetch(`http://${window.location.hostname}:8081/api/robot-control`);
+        const response = await fetch(`http://192.168.10.12:8081/api/robot-control`);
         if (!response.ok) {
             console.error('로봇 상태 조회 실패:', response.status);
             return;
@@ -177,6 +190,28 @@ async function fetchRobotSignalStates() {
         });
     } catch (err) {
         console.error('로봇 상태 조회 실패:', err);
+    }
+}
+
+async function sendRobotSignalStatus(channelId, isMuted) {
+    try {
+        const response = await fetch(`http://192.168.10.12:8081/api/robot-control`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                channel: channelId,
+                muteSignal: isMuted
+            })
+        });
+        
+        if (!response.ok) {
+            console.error(`서버 응답 에러: ${response.status}`);
+            return;
+        }
+        
+        console.log(`채널 ${channelId} 신호 차단 상태: ${isMuted}`);
+    } catch (err) {
+        console.error("서버 통신 실패:", err);
     }
 }
 

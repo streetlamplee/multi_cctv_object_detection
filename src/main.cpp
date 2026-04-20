@@ -402,7 +402,18 @@ void routine(CameraChannel *channel, std::string net_path)
             // 화면에 그리는 부분은 기존처럼 sub_frame에 그리면 됩니다.
             cv::rectangle(sub_frame, box, color_anchor, 2);
             std::string label = det.className + ": " + cv::format("%.2f", det.confidence);
-            cv::putText(sub_frame, label, cv::Point(box.x, box.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
+
+            int textHeight = 20;
+            int textY;
+            if (box.y - 10 < textHeight)
+            {
+                textY = box.y + box.height + textHeight - 5;
+            }
+            else
+            {
+                textY = box.y - 10;
+            }
+            cv::putText(sub_frame, label, cv::Point(box.x, textY), cv::FONT_HERSHEY_SIMPLEX, 0.5, color_anchor, 2);
         }
 
         std::string output_path = "./resource/output";
