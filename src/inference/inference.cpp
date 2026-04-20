@@ -7,7 +7,7 @@ inference_module::inference_module()
     this->class_names = {
         "standing", "lying down on bed", "sitting on bed", "fallen down",
         "wheel chair", "unknown status", "sitting on chair",
-        "sitting on the floor", "food tray", "perch on bed", "staff"};
+        "sitting on the floor", "food tray", "perch on bed", "staff", "Standing on bed", "jump over"};
 
     // 출력 버퍼 크기 할당 (15 * 1764)
     this->output_features.resize(num_rows * num_grids);
