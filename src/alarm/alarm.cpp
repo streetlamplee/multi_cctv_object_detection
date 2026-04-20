@@ -131,7 +131,7 @@ bool define_alarm(std::string condition, const std::deque<detected_history_item>
             res = res && history_result[i];
             break;
         }
-        if (diff_timer >= persist_seconds)
+        if (-diff_timer >= persist_seconds)
         {
             break;
         }

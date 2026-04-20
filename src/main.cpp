@@ -86,6 +86,7 @@ struct CameraChannel
 
 int main(int argc, char *argv[])
 {
+    cv::setNumThreads(1);
     // --- Initialization ---
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
